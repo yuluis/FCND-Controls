@@ -119,7 +119,7 @@ class NonlinearController(object):
             
         Returns: 3-element numpy array, desired roll moment, pitch moment, and yaw moment commands in Newtons*meters
         """
-        return np.array([0.0, 0.0, 0.0])
+        return np.array([0.0, 0.0, 1.0])
     
     def yaw_control(self, yaw_cmd, yaw):
         """ Generate the target yawrate
