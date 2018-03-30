@@ -120,7 +120,7 @@ class NonlinearController(object):
         #    Returns: thrust command for the vehicle (+up)
 
     
-    def roll_pitch_controller(self, acceleration_cmd, attitude, thrust_cmd):
+    def roll_pitch_controller(self, acceleration_cmd, attitude, thrust_cmd, mot_mat):
         """ Generate the rollrate and pitchrate commands in the body frame
         
         Args:
@@ -130,8 +130,26 @@ class NonlinearController(object):
             
         Returns: 2-element numpy array, desired rollrate (p) and pitchrate (q) commands in radians/s
         """
-        return np.array([0.0, 0.0])
-    
+        b_x = rot_mat[0, 2]
+        b_x_err = b_x_c - b_x
+        b_x_p_term = self.k_p_roll * b_x_err
+
+        b_y = rot_mat[1, 2]
+        b_y_err = b_y_c - b_y
+        b_y_p_term = self.k_p_pitch * b_y_err
+
+        b_x_commanded_dot = b_x_p_term
+        b_y_commanded_dot = b_y_p_term
+
+        rot_mat1 = np.array([[rot_mat[1, 0], -rot_mat[0, 0]], [rot_mat[1, 1], -rot_mat[0, 1]]]) / rot_mat[2, 2]
+
+        rot_rate = np.matmul(rot_mat1, np.array([b_x_commanded_dot, b_y_commanded_dot]).T)
+        p_c = rot_rate[0]
+        q_c = rot_rate[1]
+
+        return np.array([p_c, q_c])
+        # return np.arry([0,0])
+
     def body_rate_control(self, body_rate_cmd, body_rate):
         """ Generate the roll, pitch, yaw moment commands in the body frame
         
