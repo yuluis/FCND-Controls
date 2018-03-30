@@ -93,10 +93,22 @@ class NonlinearController(object):
             vertical_velocity: vehicle vertical velocity (+up)
             acceleration_ff: feedforward acceleration command (+up)
             
-        Returns: thrust command for the vehicle (+up)
+
+
+        z_err = altitude_cmd - altitude
+        z_err_dot = vertical_velocity_cmd - vertical_velocity
+        b_z = rot_mat[2, 2]
+
+        p_term = z_err
+        d_term = z_err_dot
+
+        u_1_bar = p_term + d_term + acceleration_ff
+
+        c = (u_1_bar - self.g) / b_z
+        return c
+            Returns: thrust command for the vehicle (+up)
         """
-        return 0.0
-        
+        return 0
     
     def roll_pitch_controller(self, acceleration_cmd, attitude, thrust_cmd):
         """ Generate the rollrate and pitchrate commands in the body frame
@@ -116,10 +128,16 @@ class NonlinearController(object):
         Args:
             body_rate_cmd: 3-element numpy array (p_cmd,q_cmd,r_cmd) in radians/second^2
             attitude: 3-element numpy array (p,q,r) in radians/second^2
-            
-        Returns: 3-element numpy array, desired roll moment, pitch moment, and yaw moment commands in Newtons*meters
         """
-        return np.array([0.0, 0.0, 1.0])
+        u_bar_p = body_rate_cmd[0] - body_rate[0] #TODO proportion gain of 1, make tuneable for better performance
+
+        u_bar_q = body_rate_cmd[1] - body_rate[1]
+
+        u_bar_r = body_rate_cmd[1] - body_rate[1]
+
+
+        #Returns: 3-element numpy array, desired roll moment, pitch moment, and yaw moment commands in Newtons*meters
+        return np.array([u_bar_p, u_bar_q, u_bar_r])
     
     def yaw_control(self, yaw_cmd, yaw):
         """ Generate the target yawrate
