@@ -17,9 +17,12 @@ MAX_TORQUE = 1.0
 
 class NonlinearController(object):
 
+
+
     def __init__(self):
         """Initialize the controller object and control gains"""
-        return    
+        self.g = 9.85
+        return
 
     def trajectory_control(self, position_trajectory, yaw_trajectory, time_trajectory, current_time):
         """Generate a commanded position, velocity and yaw based on the trajectory
@@ -92,23 +95,23 @@ class NonlinearController(object):
             altitude: vehicle vertical position (+up)
             vertical_velocity: vehicle vertical velocity (+up)
             acceleration_ff: feedforward acceleration command (+up)
-            
 
+        """
 
         z_err = altitude_cmd - altitude
         z_err_dot = vertical_velocity_cmd - vertical_velocity
-        b_z = rot_mat[2, 2]
+        #b_z = rot_mat[2, 2]
 
         p_term = z_err
         d_term = z_err_dot
 
         u_1_bar = p_term + d_term + acceleration_ff
 
-        c = (u_1_bar - self.g) / b_z
+        c = (u_1_bar - self.g)/0.4 # TODO divide by drone mass?
+
         return c
-            Returns: thrust command for the vehicle (+up)
-        """
-        return 0
+        #    Returns: thrust command for the vehicle (+up)
+
     
     def roll_pitch_controller(self, acceleration_cmd, attitude, thrust_cmd):
         """ Generate the rollrate and pitchrate commands in the body frame
@@ -129,24 +132,29 @@ class NonlinearController(object):
             body_rate_cmd: 3-element numpy array (p_cmd,q_cmd,r_cmd) in radians/second^2
             attitude: 3-element numpy array (p,q,r) in radians/second^2
         """
-        u_bar_p = body_rate_cmd[0] - body_rate[0] #TODO proportion gain of 1, make tuneable for better performance
+        body_p = 0.2
 
-        u_bar_q = body_rate_cmd[1] - body_rate[1]
+        u_bar_p = (body_rate_cmd[0] - body_rate[0]) * body_p #TODO proportion gain of 1, make tuneable for better performance
 
-        u_bar_r = body_rate_cmd[1] - body_rate[1]
+        u_bar_q = (body_rate_cmd[1] - body_rate[1]) * body_p
+
+        u_bar_r = (body_rate_cmd[2] - body_rate[2]) * body_p
 
 
         #Returns: 3-element numpy array, desired roll moment, pitch moment, and yaw moment commands in Newtons*meters
         return np.array([u_bar_p, u_bar_q, u_bar_r])
     
     def yaw_control(self, yaw_cmd, yaw):
-        """ Generate the target yawrate
+        """ Generate the target yawrateD
         
         Args:
-            yaw_cmd: desired vehicle yaw in radians
+            yaw_cmd: desired vehicle yaw in Dradians
             yaw: vehicle yaw in radians
         
-        Returns: target yawrate in radians/sec
+        Returns: target yawrate in radians/secR
         """
-        return 0.0
+        psi_err = (yaw_cmd - yaw)*.1
+        r_c = psi_err # TODO add proportional control later
+
+        return r_c
     
