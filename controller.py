@@ -21,7 +21,7 @@ class NonlinearController(object):
 
     def __init__(self):
         """Initialize the controller object and control gains"""
-        self.g = 9.85
+        self.g = 9.81
         return
 
     def trajectory_control(self, position_trajectory, yaw_trajectory, time_trajectory, current_time):
@@ -100,14 +100,14 @@ class NonlinearController(object):
 
         z_err = altitude_cmd - altitude
         z_err_dot = vertical_velocity_cmd - vertical_velocity
-        #b_z = rot_mat[2, 2]
+        b_z = 1 #rot_mat[2, 2]
 
         p_term = z_err
         d_term = z_err_dot
 
         u_1_bar = p_term + d_term + acceleration_ff
 
-        c = (u_1_bar - self.g)/0.4 # TODO divide by drone mass?
+        c = (u_1_bar - self.g)/b_z
 
         return c
         #    Returns: thrust command for the vehicle (+up)
@@ -134,7 +134,7 @@ class NonlinearController(object):
         """
         body_p = 0.2
 
-        u_bar_p = (body_rate_cmd[0] - body_rate[0]) * body_p #TODO proportion gain of 1, make tuneable for better performance
+        u_bar_p = (body_rate_cmd[0] - body_rate[0]) * body_p
 
         u_bar_q = (body_rate_cmd[1] - body_rate[1]) * body_p
 
@@ -157,4 +157,12 @@ class NonlinearController(object):
         r_c = psi_err # TODO add proportional control later
 
         return r_c
-    
+
+
+def R(self):
+    # TODO replace with your own implementation
+    #   according to the math above
+    #
+    # return rotation_matrix
+
+    return super(DroneIn3D, self).R()

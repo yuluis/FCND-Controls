@@ -20,7 +20,7 @@ class UnityDrone(Drone):
     def __init__(self, connection, tlog_name="TLog.txt"):
         
         super().__init__(connection, tlog_name)
-        
+        #self.g = 9.81 # add useful gravity constant
         self._target_north = 0.0
         self._target_east = 0.0
         self._target_down = 0.0
