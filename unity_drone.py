@@ -4,7 +4,7 @@ import numpy as np
 
 from udacidrone import Drone
 import time
-visdom_available= True
+visdom_available= False
 try:
     import visdom
 except:
@@ -16,11 +16,18 @@ class UnityDrone(Drone):
     UnityDrone class adds additional low-level capabilities to control the
     Unity simulation version of the drone
     """
-    
+
+
+
     def __init__(self, connection, tlog_name="TLog.txt"):
         
         super().__init__(connection, tlog_name)
-        #self.g = 9.81 # add useful gravity constant
+        self.g = 9.81 # add useful gravity constant
+        # x, y, y, phi, theta, psi, x_dot, y_dot, z_dot, p, q, r
+        self.X=np.array([0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0])
+
+
+
         self._target_north = 0.0
         self._target_east = 0.0
         self._target_down = 0.0
@@ -74,6 +81,30 @@ class UnityDrone(Drone):
         else:
             print('Visdom library not installed...')
 
+    # euler angles [rad] (in world / lab frame)
+    @property
+    def phi(self):
+        return self.X[3]
+    @property
+    def theta(self):
+        return self.X[4]
+
+    @property
+    def psi(self):
+        return self.X[5]
+
+    # body rates [rad / s] (in body frame)
+    @property
+    def p(self):
+        return self.X[9]
+
+    @property
+    def q(self):
+        return self.X[10]
+
+    @property
+    def r(self):
+        return self.X[11]
 
     def cmd_moment(self, roll_moment, pitch_moment, yaw_moment, thrust):
         """Command the drone moments.
@@ -93,7 +124,7 @@ class UnityDrone(Drone):
     @property
     def local_position_target(self):
         return np.array([self._target_north,self._target_east,self._target_down])
-    
+
     @local_position_target.setter    
     def local_position_target(self, target):
         """Pass the local position target to the drone (not a command)"""
@@ -301,3 +332,19 @@ class UnityDrone(Drone):
     
     def cmd_position(self, target_north, target_east, target_down, yaw):
         pass
+
+    def R(self):
+        r_x = np.array([[1, 0, 0],
+                        [0, np.cos(self.phi), -np.sin(self.phi)],
+                        [0, np.sin(self.phi), np.cos(self.phi)]])
+
+        r_y = np.array([[np.cos(self.theta), 0, np.sin(self.theta)],
+                        [0, 1, 0],
+                        [-np.sin(self.theta), 0, np.cos(self.theta)]])
+
+        r_z = np.array([[np.cos(self.psi), -np.sin(self.psi), 0],
+                        [np.sin(self.psi), np.cos(self.psi), 0],
+                        [0, 0, 1]])
+
+        r = np.matmul(r_z, np.matmul(r_y, r_x))
+        return r

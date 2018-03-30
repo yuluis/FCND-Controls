@@ -21,7 +21,7 @@ class NonlinearController(object):
 
     def __init__(self):
         """Initialize the controller object and control gains"""
-        self.g = 9.81
+        self.g = 9.81 # add
         return
 
     def trajectory_control(self, position_trajectory, yaw_trajectory, time_trajectory, current_time):
@@ -86,7 +86,7 @@ class NonlinearController(object):
         """
         return np.array([0.0, 0.0])
     
-    def altitude_control(self, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff=0.0):
+    def altitude_control(self, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, rot_mat, acceleration_ff=0.0):
         """Generate vertical acceleration (thrust) command
 
         Args:
@@ -100,7 +100,8 @@ class NonlinearController(object):
 
         z_err = altitude_cmd - altitude
         z_err_dot = vertical_velocity_cmd - vertical_velocity
-        b_z = 1 #rot_mat[2, 2]
+
+        b_z = rot_mat[2, 2]
 
         p_term = z_err
         d_term = z_err_dot
@@ -158,11 +159,3 @@ class NonlinearController(object):
 
         return r_c
 
-
-def R(self):
-    # TODO replace with your own implementation
-    #   according to the math above
-    #
-    # return rotation_matrix
-
-    return super(DroneIn3D, self).R()
