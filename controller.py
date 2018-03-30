@@ -97,6 +97,12 @@ class NonlinearController(object):
             acceleration_ff: feedforward acceleration command (+up)
 
         """
+        #TODO approximation Z thrust compensation for roll and pitch
+        roll_comp = np.cos(attitude[0])
+        roll_comp = np.clip(roll_comp, 0.5, 1)
+        pitch_comp = np.cos(attitude[1])
+        pitch_comp = np.clip(pitch_comp, 0.5, 1)
+        approx_comp = min(roll_comp, pitch_comp)
 
         z_err = altitude_cmd - altitude
         z_err_dot = vertical_velocity_cmd - vertical_velocity
@@ -108,7 +114,7 @@ class NonlinearController(object):
 
         u_1_bar = p_term + d_term + acceleration_ff
 
-        c = (u_1_bar - self.g)/b_z
+        c = (u_1_bar - self.g)/b_z/approx_comp
 
         return c
         #    Returns: thrust command for the vehicle (+up)

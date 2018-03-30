@@ -66,7 +66,7 @@ class ControlsFlyer(UnityDrone):
         self.local_acceleration_target = np.array([acceleration_cmd[0],
                                                    acceleration_cmd[1],
                                                    0.0])
-        
+
     def attitude_controller(self):
         rot_mat = drone.R()
         self.thrust_cmd = self.controller.altitude_control(
