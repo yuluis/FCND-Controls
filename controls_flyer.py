@@ -75,8 +75,7 @@ class ControlsFlyer(UnityDrone):
                 -self.local_position[2],
                 -self.local_velocity[2],
                 self.attitude,
-                rot_mat,
-                9.81) #rot_mat
+                9.81)
         roll_pitch_rate_cmd = self.controller.roll_pitch_controller(
                 self.local_acceleration_target[0:2],
                 self.attitude,

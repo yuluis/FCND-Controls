@@ -89,7 +89,7 @@ class NonlinearController(object):
         """
         return np.array([0.0, 0.0])
     
-    def altitude_control(self, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, rot_mat, acceleration_ff=0.0):
+    def altitude_control(self, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff=0.0):
         """Generate vertical acceleration (thrust) command
 
         Args:
@@ -111,7 +111,7 @@ class NonlinearController(object):
         z_err_dot = vertical_velocity_cmd - vertical_velocity
 
         b_z = self.rot_mat[2,2]
-        b_z = rot_mat[2, 2]
+
 
 
         p_term = z_err
@@ -127,7 +127,7 @@ class NonlinearController(object):
         #    Returns: thrust command for the vehicle (+up)
 
     
-    def roll_pitch_controller(self, acceleration_cmd, attitude, thrust_cmd, mot_mat):
+    def roll_pitch_controller(self, acceleration_cmd, attitude, thrust_cmd):
         """ Generate the rollrate and pitchrate commands in the body frame
         
         Args:
@@ -137,14 +137,16 @@ class NonlinearController(object):
             
         Returns: 2-element numpy array, desired rollrate (p) and pitchrate (q) commands in radians/s
         """
+        self.rot_mat = euler2RM (acceleration_cmd[0], acceleration_cmd[1],thrust_cmd)
+        b_x = self.rot_mat[0, 2]
+        b_x_err = attitude[0] - b_x
+        k_p_rollpitch = 0.2
 
-        b_x = rot_mat[0, 2]
-        b_x_err = b_x_c - b_x
-        b_x_p_term = self.k_p_roll * b_x_err
+        b_x_p_term = k_p_rollpitch * b_x_err
 
-        b_y = rot_mat[1, 2]
-        b_y_err = b_y_c - b_y
-        b_y_p_term = self.k_p_pitch * b_y_err
+        b_y = self.rot_mat[1, 2]
+        b_y_err = attitude[1] - b_y
+        b_y_p_term = k_p_rollpitch * b_y_err
 
 
         b_x_commanded_dot = b_x_p_term
