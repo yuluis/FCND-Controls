@@ -100,31 +100,18 @@ class NonlinearController(object):
             acceleration_ff: feedforward acceleration command (+up)
 
         """
-        #TODO approximation Z thrust compensation for roll and pitch
-        roll_comp = np.cos(attitude[0])
-        roll_comp = np.clip(roll_comp, 0.5, 1)
-        pitch_comp = np.cos(attitude[1])
-        pitch_comp = np.clip(pitch_comp, 0.5, 1)
-        approx_comp = min(roll_comp, pitch_comp)
+        b_z = self.rot_mat[2,2]
+        z_k_p = 1
+        z_k_d = 0.2
 
         z_err = altitude_cmd - altitude
         z_err_dot = vertical_velocity_cmd - vertical_velocity
-
-        b_z = self.rot_mat[2,2]
-
-
-
-        p_term = z_err
-        d_term = z_err_dot
-
+        p_term = z_k_p * z_err
+        d_term = z_k_d * z_err_dot
         u_1_bar = p_term + d_term + acceleration_ff
+        c = (u_1_bar - self.g) / b_z
+        return c  #    Returns: thrust command for the vehicle (+up)
 
-
-        c = (u_1_bar - self.g)/b_z
-
-
-        return c
-        #    Returns: thrust command for the vehicle (+up)
 
     
     def roll_pitch_controller(self, acceleration_cmd, attitude, thrust_cmd):
@@ -169,7 +156,7 @@ class NonlinearController(object):
             body_rate_cmd: 3-element numpy array (p_cmd,q_cmd,r_cmd) in radians/second^2
             attitude: 3-element numpy array (p,q,r) in radians/second^2
         """
-        body_p = 0.2
+        body_p = 1
 
         u_bar_p = (body_rate_cmd[0] - body_rate[0]) * body_p
 
@@ -190,7 +177,7 @@ class NonlinearController(object):
         
         Returns: target yawrate in radians/secRR
         """
-        psi_err = (yaw_cmd - yaw)*.2
+        psi_err = (yaw_cmd - yaw)* 1
         r_c = psi_err
 
         return r_c
