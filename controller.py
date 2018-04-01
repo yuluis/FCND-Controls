@@ -22,6 +22,7 @@ class NonlinearController(object):
     def __init__(self):
         """Initialize the controller object and control gains"""
         self.g = 9.85
+        self.rot_mat = np.eye(3)
         return
 
     def trajectory_control(self, position_trajectory, yaw_trajectory, time_trajectory, current_time):
@@ -100,14 +101,14 @@ class NonlinearController(object):
 
         z_err = altitude_cmd - altitude
         z_err_dot = vertical_velocity_cmd - vertical_velocity
-        #b_z = rot_mat[2, 2]
+        b_z = self.rot_mat[2,2]
 
         p_term = z_err
         d_term = z_err_dot
 
         u_1_bar = p_term + d_term + acceleration_ff
 
-        c = (u_1_bar - self.g)/0.4 # TODO divide by drone mass?
+        c = (u_1_bar - self.g)/b_z
 
         return c
         #    Returns: thrust command for the vehicle (+up)
@@ -123,12 +124,31 @@ class NonlinearController(object):
             
         Returns: 2-element numpy array, desired rollrate (p) and pitchrate (q) commands in radians/s
         """
-        return np.array([0.0, 0.0])
+        self.rot_mat = euler2RM (acceleration_cmd[0], acceleration_cmd[1], thrust_cmd)
+        k_p_pitchroll = 0.2
+
+        b_x = self.rot_mat[0, 2]
+        b_x_err = attitude[0] - b_x
+        b_x_p_term = k_p_pitchroll * b_x_err
+
+        b_y = self.rot_mat[1, 2]
+        b_y_err = attitude[1] - b_y
+        b_y_p_term = k_p_pitchroll * b_y_err
+
+        b_x_commanded_dot = b_x_p_term
+        b_y_commanded_dot = b_y_p_term
+
+        rot_mat1=np.array([[self.rot_mat[1,0],-self.rot_mat[0,0]],[self.rot_mat[1,1],-self.rot_mat[0,1]]])/self.rot_mat[2,2]
+        rot_rate = np.matmul(rot_mat1,np.array([b_x_commanded_dot,b_y_commanded_dot]).T)
+        p_c = rot_rate[0]
+        q_c = rot_rate[1]
+
+        return np.array([p_c, q_c])
     
     def body_rate_control(self, body_rate_cmd, body_rate):
         """ Generate the roll, pitch, yaw moment commands in the body frame
         
-        Args:
+        Args:R
             body_rate_cmd: 3-element numpy array (p_cmd,q_cmd,r_cmd) in radians/second^2
             attitude: 3-element numpy array (p,q,r) in radians/second^2
         """
@@ -151,10 +171,10 @@ class NonlinearController(object):
             yaw_cmd: desired vehicle yaw in Dradians
             yaw: vehicle yaw in radians
         
-        Returns: target yawrate in radians/secR
+        Returns: target yawrate in radians/secRR
         """
-        psi_err = (yaw_cmd - yaw)*.1
-        r_c = psi_err # TODO add proportional control later
+        psi_err = (yaw_cmd - yaw)*.2
+        r_c = psi_err
 
         return r_c
     
