@@ -48,7 +48,9 @@ class ControlsFlyer(UnityDrone):
         self.register_callback(MsgID.ATTITUDE, self.attitude_callback)
         self.register_callback(MsgID.RAW_GYROSCOPE, self.gyro_callback)
         
-    def position_controller(self):  
+    def position_controller(self):
+
+
         (self.local_position_target,
          self.local_velocity_target,
          yaw_cmd) = self.controller.trajectory_control(
@@ -64,15 +66,17 @@ class ControlsFlyer(UnityDrone):
         self.local_acceleration_target = np.array([acceleration_cmd[0],
                                                    acceleration_cmd[1],
                                                    0.0])
-        
+
     def attitude_controller(self):
+        rot_mat = drone.R()
         self.thrust_cmd = self.controller.altitude_control(
                 -self.local_position_target[2],
                 -self.local_velocity_target[2],
                 -self.local_position[2],
                 -self.local_velocity[2],
                 self.attitude,
-                9.81)
+                rot_mat,
+                9.81) #rot_mat
         roll_pitch_rate_cmd = self.controller.roll_pitch_controller(
                 self.local_acceleration_target[0:2],
                 self.attitude,
