@@ -4,7 +4,7 @@ import numpy as np
 
 from udacidrone import Drone
 import time
-visdom_available= False
+visdom_available= True
 try:
     import visdom
 except:

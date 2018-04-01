@@ -15,6 +15,7 @@ from unity_drone import UnityDrone
 from controller import NonlinearController
 from udacidrone.connection import MavlinkConnection  # noqa: F401
 from udacidrone.messaging import MsgID
+import time as timer
 
 
 class States(Enum):
@@ -47,6 +48,7 @@ class ControlsFlyer(UnityDrone):
         
         self.register_callback(MsgID.ATTITUDE, self.attitude_callback)
         self.register_callback(MsgID.RAW_GYROSCOPE, self.gyro_callback)
+        self.start_time = timer.time()
         
     def position_controller(self):
 
@@ -104,6 +106,7 @@ class ControlsFlyer(UnityDrone):
             self.bodyrate_controller()
 
     def local_position_callback(self):
+        #print("time elapsed since start", timer.time()-self.start_time)
         if self.flight_state == States.TAKEOFF:
             if -1.0 * self.local_position[2] > 0.95 * self.target_position[2]:
                 #self.all_waypoints = self.calculate_box()
@@ -120,7 +123,9 @@ class ControlsFlyer(UnityDrone):
                     self.waypoint_transition()
                 else:
                     if np.linalg.norm(self.local_velocity[0:2]) < 1.0:
-                        self.landing_transition()
+                        #self.landing_transition()
+                        pass
+
 
     def velocity_callback(self):
         if self.flight_state == States.LANDING:
@@ -172,6 +177,10 @@ class ControlsFlyer(UnityDrone):
         self.waypoint_number = self.waypoint_number + 1
         self.target_position = self.all_waypoints.pop(0)
         self.target_position = np.array([0.0, 0.0, -3.0])  # TODO set local_position_target fixed for debugging
+
+        self.local_position_target = np.array(
+            (self.target_position[0], self.target_position[1], self.target_position[2]))
+
         self.flight_state = States.WAYPOINT
 
     def landing_transition(self):

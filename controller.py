@@ -8,6 +8,7 @@ components:
 """
 import numpy as np
 from frame_utils import euler2RM
+import time as timer
 
 DRONE_MASS_KG = 0.5
 GRAVITY = -9.81
@@ -24,6 +25,7 @@ class NonlinearController(object):
 
         self.g = 9.81
         self.rot_mat = np.eye(3)
+        self.start_time = timer.time()
 
         return
 
@@ -101,8 +103,8 @@ class NonlinearController(object):
 
         """
         b_z = self.rot_mat[2,2]
-        z_k_p = 1
-        z_k_d = 0.2
+        z_k_p = 0.3
+        z_k_d = .3
 
         z_err = altitude_cmd - altitude
         z_err_dot = vertical_velocity_cmd - vertical_velocity
@@ -110,7 +112,17 @@ class NonlinearController(object):
         d_term = z_k_d * z_err_dot
         u_1_bar = p_term + d_term + acceleration_ff
         c = (u_1_bar - self.g) / b_z
+
+        roll_comp = np.cos(attitude[0])
+        roll_comp = np.clip(roll_comp, 0.5, 1)
+        pitch_comp = np.cos(attitude[1])
+        pitch_comp = np.clip(pitch_comp, 0.5, 1)
+        approx_comp = min(roll_comp, pitch_comp)
+        c = c / approx_comp
+        c = np.clip(c, 8, 15)
+        print ("thrust command" , c)
         return c  #    Returns: thrust command for the vehicle (+up)
+
 
 
     
@@ -124,10 +136,13 @@ class NonlinearController(object):
             
         Returns: 2-element numpy array, desired rollrate (p) and pitchrate (q) commands in radians/s
         """
+        #TODO debug
+        thrust_cmd = 0
+
         self.rot_mat = euler2RM (acceleration_cmd[0], acceleration_cmd[1],thrust_cmd)
         b_x = self.rot_mat[0, 2]
         b_x_err = attitude[0] - b_x
-        k_p_rollpitch = 0.2
+        k_p_rollpitch = 1
 
         b_x_p_term = k_p_rollpitch * b_x_err
 
@@ -142,9 +157,13 @@ class NonlinearController(object):
 
         rot_mat1=np.array([[self.rot_mat[1,0],-self.rot_mat[0,0]],[self.rot_mat[1,1],-self.rot_mat[0,1]]])/self.rot_mat[2,2]
         rot_rate = np.matmul(rot_mat1,np.array([b_x_commanded_dot,b_y_commanded_dot]).T)
+        tau=2*DRONE_MASS_KG* 0.7
+        p_c = rot_rate[0]/tau
+        q_c = rot_rate[1]/tau
 
-        p_c = rot_rate[0]
-        q_c = rot_rate[1]
+        #current_time = timer.time()
+        #print("time elapsed since start", current_time-self.start_time)
+        #self.start_time =current_time
 
         return np.array([p_c, q_c])
 
@@ -164,10 +183,12 @@ class NonlinearController(object):
 
         u_bar_r = (body_rate_cmd[2] - body_rate[2]) * body_p
 
+        #print("time elapsed since start", timer.time()-self.start_time)
 
         #Returns: 3-element numpy array, desired roll moment, pitch moment, and yaw moment commands in Newtons*meters
         return np.array([u_bar_p, u_bar_q, u_bar_r])
-    
+
+
     def yaw_control(self, yaw_cmd, yaw):
         """ Generate the target yawrateD
         
@@ -177,7 +198,9 @@ class NonlinearController(object):
         
         Returns: target yawrate in radians/secRR
         """
-        psi_err = (yaw_cmd - yaw)* 1
+        yaw_p = 0
+
+        psi_err = (yaw_cmd - yaw)* yaw_p
         r_c = psi_err
 
         return r_c

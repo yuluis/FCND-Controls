@@ -137,7 +137,9 @@ def velocity_callback(self):
 
 ### Step 5
 
-In the waypoint transition method, replace the `self.cmd_position` method (which is disabled by `UnityDrone`) with setting the target local position. Note: `local_position_target` should be in NED coordinates, the backyard_flyer solution may calculate the box in NE altitude coordinates
+In the waypoint transition method, replace the `self.cmd_position` method (which is disabled by `UnityDrone`)
+with setting the target local position. Note: `local_position_target` should be in NED coordinates, the backyard_flyer solution
+may calculate the box in NE altitude coordinates
 
 ```py
 # replace this
