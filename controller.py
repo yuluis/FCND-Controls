@@ -102,15 +102,16 @@ class NonlinearController(object):
             acceleration_ff: feedforward acceleration command (+up)
 
         """
+        mot_mat = euler2RM(attitude[0], attitude[1], attitude[2])
         b_z = self.rot_mat[2,2]
-        z_k_p = 0.3
-        z_k_d = .3
+        z_k_p = 0.7
+        z_k_d = 0.1
 
         z_err = altitude_cmd - altitude
         z_err_dot = vertical_velocity_cmd - vertical_velocity
         p_term = z_k_p * z_err
         d_term = z_k_d * z_err_dot
-        u_1_bar = p_term + d_term + acceleration_ff
+        u_1_bar = p_term + d_term + acceleration_ff # TODO I don't understand why this is thrust
         c = (u_1_bar - self.g) / b_z
 
         roll_comp = np.cos(attitude[0])
@@ -119,9 +120,14 @@ class NonlinearController(object):
         pitch_comp = np.clip(pitch_comp, 0.5, 1)
         approx_comp = min(roll_comp, pitch_comp)
         c = c / approx_comp
-        c = np.clip(c, 8, 15)
-        print ("thrust command" , c)
+        c = np.clip(c, 0, 20)* DRONE_MASS_KG
+
+        #print("altitude_cmd, velocity_cmd", altitude_cmd, vertical_velocity_cmd, "thrust", c, "alt, vel", altitude, vertical_velocity_cmd)
+        print("time= {0:.4f}, altitude_cmd, velocity_cmd, altitude, velocity, attitude, accel, thrust)".format(timer.time()), c,
+              vertical_velocity_cmd, attitude, acceleration_ff, c)
+
         return c  #    Returns: thrust command for the vehicle (+up)
+        #return 9.8* 0.5 #TODO zero out altitude control
 
 
 
@@ -136,13 +142,11 @@ class NonlinearController(object):
             
         Returns: 2-element numpy array, desired rollrate (p) and pitchrate (q) commands in radians/s
         """
-        #TODO debug
-        thrust_cmd = 0
 
         self.rot_mat = euler2RM (acceleration_cmd[0], acceleration_cmd[1],thrust_cmd)
         b_x = self.rot_mat[0, 2]
         b_x_err = attitude[0] - b_x
-        k_p_rollpitch = 1
+        k_p_rollpitch = 0.7
 
         b_x_p_term = k_p_rollpitch * b_x_err
 
@@ -161,12 +165,10 @@ class NonlinearController(object):
         p_c = rot_rate[0]/tau
         q_c = rot_rate[1]/tau
 
-        #current_time = timer.time()
-        #print("time elapsed since start", current_time-self.start_time)
-        #self.start_time =current_time
+        #print("time= {0:.4f}, accel cmd, attitude, thrust_cmd, p_c, q_c)".format(timer.time()), acceleration_cmd, attitude, thrust_cmd, np.array([p_c, q_c]) )
 
         return np.array([p_c, q_c])
-
+        #return np.array([0,0]) #TODO zero out roll pitch compensation
 
     def body_rate_control(self, body_rate_cmd, body_rate):
         """ Generate the roll, pitch, yaw moment commands in the body frame
@@ -175,7 +177,7 @@ class NonlinearController(object):
             body_rate_cmd: 3-element numpy array (p_cmd,q_cmd,r_cmd) in radians/second^2
             attitude: 3-element numpy array (p,q,r) in radians/second^2
         """
-        body_p = 1
+        body_p = 0.3
 
         u_bar_p = (body_rate_cmd[0] - body_rate[0]) * body_p
 
@@ -183,10 +185,14 @@ class NonlinearController(object):
 
         u_bar_r = (body_rate_cmd[2] - body_rate[2]) * body_p
 
-        #print("time elapsed since start", timer.time()-self.start_time)
+        body_new = np.array([u_bar_p, u_bar_q, u_bar_r])
+
+        #print("time= {0:.4f}, body_rate (cmd, curr, new)".format(timer.time()), body_rate_cmd, body_rate, body_new )
+
 
         #Returns: 3-element numpy array, desired roll moment, pitch moment, and yaw moment commands in Newtons*meters
-        return np.array([u_bar_p, u_bar_q, u_bar_r])
+        return body_new
+        #return np.array([0,0,0])
 
 
     def yaw_control(self, yaw_cmd, yaw):
@@ -198,10 +204,11 @@ class NonlinearController(object):
         
         Returns: target yawrate in radians/secRR
         """
-        yaw_p = 0
+        yaw_p = 0.3
+        psi_err = (yaw_cmd - yaw)
+        r_c = psi_err * yaw_p
 
-        psi_err = (yaw_cmd - yaw)* yaw_p
-        r_c = psi_err
+        #print("time= {0:.4f}, yaw (cmd, curr, new)".format(timer.time()), yaw_cmd, yaw, r_c )
 
         return r_c
 

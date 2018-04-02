@@ -59,7 +59,8 @@ class ControlsFlyer(UnityDrone):
                  self.position_trajectory,
                  self.yaw_trajectory,
                  self.time_trajectory, time.time())
-        self.attitude_target = np.array((0.0, 0.0, yaw_cmd))
+        #self.attitude_target = np.array((0.0, 0.0, yaw_cmd))
+        #self.attitude_target = np.array((0.0, 0.0, 0.0)) #TODO temporarily set to 0 the yaw
         acceleration_cmd = self.controller.lateral_position_control(
                 self.local_position_target[0:2],
                 self.local_velocity_target[0:2],
@@ -70,14 +71,13 @@ class ControlsFlyer(UnityDrone):
                                                    0.0])
 
     def attitude_controller(self):
-        rot_mat = drone.R()
         self.thrust_cmd = self.controller.altitude_control(
                 -self.local_position_target[2],
                 -self.local_velocity_target[2],
                 -self.local_position[2],
                 -self.local_velocity[2],
                 self.attitude,
-                9.81)
+                0) #TODO set acceleration to 0 to debug
         roll_pitch_rate_cmd = self.controller.roll_pitch_controller(
                 self.local_acceleration_target[0:2],
                 self.attitude,
