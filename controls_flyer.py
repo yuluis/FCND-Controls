@@ -49,6 +49,9 @@ class ControlsFlyer(UnityDrone):
         self.register_callback(MsgID.ATTITUDE, self.attitude_callback)
         self.register_callback(MsgID.RAW_GYROSCOPE, self.gyro_callback)
         self.start_time = timer.time()
+        self.delaycounter = 0 # used to reduce frequency of altitude correction
+        self.thrust_cmd = 4.5
+        self.roll_pitch_rate_cmd = [0,0]
         
     def position_controller(self):
 
@@ -59,8 +62,8 @@ class ControlsFlyer(UnityDrone):
                  self.position_trajectory,
                  self.yaw_trajectory,
                  self.time_trajectory, time.time())
-        #self.attitude_target = np.array((0.0, 0.0, yaw_cmd))
-        #self.attitude_target = np.array((0.0, 0.0, 0.0)) #TODO temporarily set to 0 the yaw
+        self.attitude_target = np.array((0.0, 0.0, yaw_cmd))
+        #Rself.attitude_target = np.array((0.0, 0.0, 0.0)) #TODO temporarily set to 0 the yaw
         acceleration_cmd = self.controller.lateral_position_control(
                 self.local_position_target[0:2],
                 self.local_velocity_target[0:2],
@@ -71,22 +74,32 @@ class ControlsFlyer(UnityDrone):
                                                    0.0])
 
     def attitude_controller(self):
-        self.thrust_cmd = self.controller.altitude_control(
-                -self.local_position_target[2],
-                -self.local_velocity_target[2],
-                -self.local_position[2],
-                -self.local_velocity[2],
-                self.attitude,
-                0) #TODO set acceleration to 0 to debug
-        roll_pitch_rate_cmd = self.controller.roll_pitch_controller(
-                self.local_acceleration_target[0:2],
-                self.attitude,
-                self.thrust_cmd)
+
+        # do this every 4 message for about 100 ms
+        self.delaycounter = self.delaycounter + 1
+        if self.delaycounter % 8 == 0 :
+            self.thrust_cmd = self.controller.altitude_control(
+                    -self.local_position_target[2],
+                    -self.local_velocity_target[2],
+                    -self.local_position[2],
+                    -self.local_velocity[2],
+                    self.attitude,
+                    0) #TODO set acceleration to 0 to debug
+
+        if self.delaycounter % 4 == 0 :
+            self.roll_pitch_rate_cmd = self.controller.roll_pitch_controller(
+                    # self.local_acceleration_target[0:2], # TODO for now not implment positiona
+                    self.roll_pitch_rate_cmd,
+                    self.attitude,
+                    self.thrust_cmd)
+
         yawrate_cmd = self.controller.yaw_control(
-                self.attitude_target[2],
+                #self.attitude_target[2], #TODO as zero for now
+                0,
                 self.attitude[2])
+
         self.body_rate_target = np.array(
-                [roll_pitch_rate_cmd[0], roll_pitch_rate_cmd[1], yawrate_cmd])
+                [self.roll_pitch_rate_cmd[0], self.roll_pitch_rate_cmd[1], yawrate_cmd])
         
     def bodyrate_controller(self):        
         moment_cmd = self.controller.body_rate_control(
