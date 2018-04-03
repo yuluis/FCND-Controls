@@ -97,15 +97,15 @@ class NonlinearController(object):
         Args:
             altitude_cmd: desired vertical position (+up)
             vertical_velocity_cmd: desired vertical velocity (+up)
-            altitude: vehicle vertical position (+up)
+            altitude: vehicle vertical position (+up) LY: world frame.
             vertical_velocity: vehicle vertical velocity (+up)
             acceleration_ff: feedforward acceleration command (+up)
 
         """
         mot_mat = euler2RM(attitude[0], attitude[1], attitude[2])
         b_z = self.rot_mat[2,2]
-        z_k_p = 3
-        z_k_d = 2
+        z_k_p = 1
+        z_k_d = 0.2
 
         z_err = altitude_cmd - altitude
         z_err_dot = vertical_velocity_cmd - vertical_velocity
