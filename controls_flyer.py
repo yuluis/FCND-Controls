@@ -62,8 +62,11 @@ class ControlsFlyer(UnityDrone):
                  self.position_trajectory,
                  self.yaw_trajectory,
                  self.time_trajectory, time.time())
-        self.attitude_target = np.array((0.0, 0.0, yaw_cmd))
-        #Rself.attitude_target = np.array((0.0, 0.0, 0.0)) #TODO temporarily set to 0 the yaw
+
+        self.local_position_target[2] = -3.0  # TODO override local_position_target altitude
+
+        #self.attitude_target = np.array((0.0, 0.0, yaw_cmd))
+        self.attitude_target = np.array((0.0, 0.0, 0.0)) #TODO temporarily set to 0 the yaw
         acceleration_cmd = self.controller.lateral_position_control(
                 self.local_position_target[0:2],
                 self.local_velocity_target[0:2],
@@ -81,7 +84,8 @@ class ControlsFlyer(UnityDrone):
         self.delaycounter = self.delaycounter + 1
         #if self.delaycounter % 8 == 0 :
         self.thrust_cmd = self.controller.altitude_control(
-                -self.local_position_target[2],
+                #-self.local_position_target[2],
+                3.0, # TODO fix this value at height 3
                 -self.local_velocity_target[2],
                 -self.local_position[2],
                 -self.local_velocity[2],
@@ -109,17 +113,17 @@ class ControlsFlyer(UnityDrone):
         moment_cmd = self.controller.body_rate_control(
                 self.body_rate_target,
                 self.gyro_raw)
-#        self.cmd_moment(moment_cmd[0],
-#                        moment_cmd[1],
-#                        moment_cmd[2],
-#                        self.thrust_cmd)
-
-        # add debugging to hover only TODO
-        print("bodyrate_controller: bodyrate moment, thrust", moment_cmd, self.thrust_cmd)
         self.cmd_moment(moment_cmd[0],
                         moment_cmd[1],
                         moment_cmd[2],
-                        9.81/2)
+                        self.thrust_cmd)
+
+        # add debugging to hover only TODO
+        #print("bodyrate_controller: bodyrate moment, thrust", moment_cmd, self.thrust_cmd)
+        #self.cmd_moment(moment_cmd[0],
+        #                moment_cmd[1],
+        #                moment_cmd[2],
+        #                9.81/2) # set to 9.81/2 for debugging
         pass
 
     
@@ -202,11 +206,11 @@ class ControlsFlyer(UnityDrone):
         #print("waypoint transition")
         self.waypoint_number = self.waypoint_number + 1
         self.target_position = self.all_waypoints.pop(0)
-        self.target_position = np.array([0.0, 0.0, -3.0])  # TODO set local_position_target fixed for debugging
 
-        self.local_position_target = np.array(
-            (self.target_position[0], self.target_position[1], self.target_position[2]))
+        #self.local_position_target = np.array(
+        #    (self.target_position[0], self.target_position[1], self.target_position[2]))
 
+        self.local_position_target = np.array([0.0, 0.0, -3.0]) # TODO set local_position_target fixed for debugging
         self.flight_state = States.WAYPOINT
 
     def landing_transition(self):

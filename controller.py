@@ -73,7 +73,7 @@ class NonlinearController(object):
                         (current_time - time0) / (time1 - time0) + position0
         velocity_cmd = (position1 - position0) / (time1 - time0)
         
-        
+
         return (position_cmd, velocity_cmd, yaw_cmd)
     
     def lateral_position_control(self, local_position_cmd, local_velocity_cmd, local_position, local_velocity,
@@ -104,8 +104,8 @@ class NonlinearController(object):
         """
         mot_mat = euler2RM(attitude[0], attitude[1], attitude[2])
         b_z = self.rot_mat[2,2]
-        z_k_p = 1.0
-        z_k_d = 0.7
+        z_k_p = 1
+        z_k_d = 1
 
         z_err = altitude_cmd - altitude
         z_err_dot = vertical_velocity_cmd - vertical_velocity
@@ -115,10 +115,10 @@ class NonlinearController(object):
         u_1_bar = p_term + d_term + acceleration_ff #PD controller
         c = (u_1_bar + self.g) / b_z #factor in self frame relative to Euler frame, self.g is accel needed to zero out gravity
 
-        thrust = DRONE_MASS_KG * c
+        thrust = DRONE_MASS_KG * c #thrust is in the body frame?
 
-        #print("time= {0:.4f}, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, accel, thrust)".format(timer.time()),
-        #     altitude_cmd, vertical_velocity_cmd, attitude, vertical_velocity, attitude, acceleration_ff, thrust)
+        #print("altitude_control:: time= {0:.4f}, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, accel, thrust)".format(timer.time()),
+        #     altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff, thrust)
 
         return thrust  #    Returns: thrust command for the vehicle (+up)
 
@@ -153,13 +153,13 @@ class NonlinearController(object):
         rot_mat1=np.array([[self.rot_mat[1,0],-self.rot_mat[0,0]],[self.rot_mat[1,1],-self.rot_mat[0,1]]])/self.rot_mat[2,2]
 
         rot_rate = np.matmul(rot_mat1,np.array([b_x_commanded_dot,b_y_commanded_dot]).T)
-        tau=2*DRONE_MASS_KG* 0.3
+        tau=2*DRONE_MASS_KG* 1
         p_c = rot_rate[0]/tau * MOI[0] # TODO factor in rotational moment? are p and q body frame moments?
         q_c = rot_rate[1]/tau * MOI[1]
 
 
-        print("roll_pitch_controller:: time= {0:.4f}, accel cmd, attitude, thrust_cmd, p_c, q_c)".format(timer.time()),
-              acceleration_cmd, attitude, thrust_cmd, np.array([p_c, q_c]) )
+        #print("roll_pitch_controller:: time= {0:.4f}, accel cmd, attitude, thrust_cmd, p_c, q_c)".format(timer.time()),
+        #      acceleration_cmd, attitude, thrust_cmd, np.array([p_c, q_c]) )
         if attitude[0] > 1 :
             print("attitude", attitude)
             pass
@@ -183,7 +183,7 @@ class NonlinearController(object):
 
         body_new = np.array([u_bar_p, u_bar_q, u_bar_r])
 
-        print("body_rate_control:: time= {0:.4f}, body_rate (cmd, curr, new)".format(timer.time()), body_rate_cmd, body_rate, body_new )
+        #print("body_rate_control:: time= {0:.4f}, body_rate (cmd, curr, new)".format(timer.time()), body_rate_cmd, body_rate, body_new )
 
         #Returns: 3-element numpy array, desired roll moment, pitch moment, and yaw moment commands in Newtons*meters
         return body_new
@@ -199,11 +199,11 @@ class NonlinearController(object):
         
         Returns: target yawrate in radians/secRR
         """
-        yaw_p = 0.3
+        yaw_p = 1
         psi_err = (yaw_cmd - yaw)
         r_c = psi_err * yaw_p
 
-        #print("time= {0:.4f}, yaw (cmd, curr, new)".format(timer.time()), yaw_cmd, yaw, r_c )
+        print("yaw_control::time= {0:.4f}, yaw (cmd, curr, new)".format(timer.time()), yaw_cmd, yaw, r_c )
 
         return r_c
 
