@@ -136,30 +136,34 @@ class NonlinearController(object):
             
         Returns: 2-element numpy array, desired rollrate (p) and pitchrate (q) commands in radians/s
         """
+        k_p_rollpitch = 1
 
         self.rot_mat = euler2RM (acceleration_cmd[0], acceleration_cmd[1],thrust_cmd)
         b_x = self.rot_mat[0, 2]
-        b_x_err = attitude[0] - b_x
-        k_p_rollpitch = 1
-
+        b_x_err = b_x - attitude[0]
         b_x_p_term = k_p_rollpitch * b_x_err
 
         b_y = self.rot_mat[1, 2]
-        b_y_err = attitude[1] - b_y
+        b_y_err = b_y - attitude[1]
         b_y_p_term = k_p_rollpitch * b_y_err
-
 
         b_x_commanded_dot = b_x_p_term
         b_y_commanded_dot = b_y_p_term
 
-
         rot_mat1=np.array([[self.rot_mat[1,0],-self.rot_mat[0,0]],[self.rot_mat[1,1],-self.rot_mat[0,1]]])/self.rot_mat[2,2]
-        rot_rate = np.matmul(rot_mat1,np.array([b_x_commanded_dot,b_y_commanded_dot]).T)
-        tau=2*DRONE_MASS_KG* 1
-        p_c = rot_rate[0]/tau
-        q_c = rot_rate[1]/tau
 
-        #print("time= {0:.4f}, accel cmd, attitude, thrust_cmd, p_c, q_c)".format(timer.time()), acceleration_cmd, attitude, thrust_cmd, np.array([p_c, q_c]) )
+        rot_rate = np.matmul(rot_mat1,np.array([b_x_commanded_dot,b_y_commanded_dot]).T)
+        tau=2*DRONE_MASS_KG* 0.3
+        p_c = rot_rate[0]/tau * MOI[0] # TODO factor in rotational moment? are p and q body frame moments?
+        q_c = rot_rate[1]/tau * MOI[1]
+
+
+        print("roll_pitch_controller:: time= {0:.4f}, accel cmd, attitude, thrust_cmd, p_c, q_c)".format(timer.time()),
+              acceleration_cmd, attitude, thrust_cmd, np.array([p_c, q_c]) )
+        if attitude[0] > 1 :
+            print("attitude", attitude)
+            pass
+
         return np.array([p_c, q_c])
 
     def body_rate_control(self, body_rate_cmd, body_rate):
@@ -169,18 +173,17 @@ class NonlinearController(object):
             body_rate_cmd: 3-element numpy array (p_cmd,q_cmd,r_cmd) in radians/second^2
             attitude: 3-element numpy array (p,q,r) in radians/second^2
         """
-        body_p = 0.3
+        body_p = 1
 
-        u_bar_p = (body_rate_cmd[0] - body_rate[0]) * body_p
+        u_bar_p = (body_rate_cmd[0] - body_rate[0]) * body_p * MOI[0]
 
-        u_bar_q = (body_rate_cmd[1] - body_rate[1]) * body_p
+        u_bar_q = (body_rate_cmd[1] - body_rate[1]) * body_p * MOI[1]
 
-        u_bar_r = (body_rate_cmd[2] - body_rate[2]) * body_p
+        u_bar_r = (body_rate_cmd[2] - body_rate[2]) * body_p * MOI[2]
 
         body_new = np.array([u_bar_p, u_bar_q, u_bar_r])
 
-        print("time= {0:.4f}, body_rate (cmd, curr, new)".format(timer.time()), body_rate_cmd, body_rate, body_new )
-
+        print("body_rate_control:: time= {0:.4f}, body_rate (cmd, curr, new)".format(timer.time()), body_rate_cmd, body_rate, body_new )
 
         #Returns: 3-element numpy array, desired roll moment, pitch moment, and yaw moment commands in Newtons*meters
         return body_new

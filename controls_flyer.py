@@ -69,46 +69,59 @@ class ControlsFlyer(UnityDrone):
                 self.local_velocity_target[0:2],
                 self.local_position[0:2],
                 self.local_velocity[0:2])
-        self.local_acceleration_target = np.array([acceleration_cmd[0],
-                                                   acceleration_cmd[1],
-                                                   0.0])
+#        self.local_acceleration_target = np.array([acceleration_cmd[0],
+#                                                   acceleration_cmd[1],
+#                                                   0.0])
+        # TODO zero out accelleration for development
+        self.local_acceleration_target = np.array([0.0,0.0, 0.0])
 
     def attitude_controller(self):
 
         # do this every 4 message for about 100 ms
         self.delaycounter = self.delaycounter + 1
-        if self.delaycounter % 8 == 0 :
-            self.thrust_cmd = self.controller.altitude_control(
-                    -self.local_position_target[2],
-                    -self.local_velocity_target[2],
-                    -self.local_position[2],
-                    -self.local_velocity[2],
-                    self.attitude,
-                    0) #TODO set acceleration to 0 to debug
+        #if self.delaycounter % 8 == 0 :
+        self.thrust_cmd = self.controller.altitude_control(
+                -self.local_position_target[2],
+                -self.local_velocity_target[2],
+                -self.local_position[2],
+                -self.local_velocity[2],
+                self.attitude,
+                0) #TODO set acceleration to 0 to debug
 
-        if self.delaycounter % 4 == 0 :
-            self.roll_pitch_rate_cmd = self.controller.roll_pitch_controller(
-                    # self.local_acceleration_target[0:2], # TODO for now not implment positiona
-                    self.roll_pitch_rate_cmd,
-                    self.attitude,
-                    self.thrust_cmd)
+        #if self.delaycounter % 4 == 0 :
+        self.roll_pitch_rate_cmd = self.controller.roll_pitch_controller(
+                # self.local_acceleration_target[0:2], # TODO for now not implment positiona
+                self.roll_pitch_rate_cmd,
+                self.attitude,
+                self.thrust_cmd)
 
         yawrate_cmd = self.controller.yaw_control(
-                #self.attitude_target[2], #TODO as zero for now
-                0,
+                self.attitude_target[2],
                 self.attitude[2])
 
         self.body_rate_target = np.array(
                 [self.roll_pitch_rate_cmd[0], self.roll_pitch_rate_cmd[1], yawrate_cmd])
-        
+        #TODO zero out the body_rate_target request
+        print("attitude_controller:: roll, pitch, yaw (world)", self.body_rate_target)
+        #self.body_rate_target = np.array([1,0,0])
+
     def bodyrate_controller(self):        
         moment_cmd = self.controller.body_rate_control(
                 self.body_rate_target,
                 self.gyro_raw)
+#        self.cmd_moment(moment_cmd[0],
+#                        moment_cmd[1],
+#                        moment_cmd[2],
+#                        self.thrust_cmd)
+
+        # add debugging to hover only TODO
+        print("bodyrate_controller: bodyrate moment, thrust", moment_cmd, self.thrust_cmd)
         self.cmd_moment(moment_cmd[0],
                         moment_cmd[1],
                         moment_cmd[2],
-                        self.thrust_cmd)
+                        9.81/2)
+        pass
+
     
     def attitude_callback(self):
         if self.flight_state == States.WAYPOINT:
