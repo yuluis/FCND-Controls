@@ -104,8 +104,8 @@ class NonlinearController(object):
         """
         mot_mat = euler2RM(attitude[0], attitude[1], attitude[2])
         b_z = self.rot_mat[2,2]
-        z_k_p = 1
-        z_k_d = 1
+        z_k_p = 3
+        z_k_d = 2
 
         z_err = altitude_cmd - altitude
         z_err_dot = vertical_velocity_cmd - vertical_velocity
@@ -117,8 +117,8 @@ class NonlinearController(object):
 
         thrust = DRONE_MASS_KG * c #thrust is in the body frame?
 
-        #print("altitude_control:: time= {0:.4f}, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, accel, thrust)".format(timer.time()),
-        #     altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff, thrust)
+        print("altitude_control:: time= {0:.4f}, b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, accel, thrust)".format(timer.time()),
+             b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff, thrust)
 
         return thrust  #    Returns: thrust command for the vehicle (+up)
 
@@ -153,7 +153,7 @@ class NonlinearController(object):
         rot_mat1=np.array([[self.rot_mat[1,0],-self.rot_mat[0,0]],[self.rot_mat[1,1],-self.rot_mat[0,1]]])/self.rot_mat[2,2]
 
         rot_rate = np.matmul(rot_mat1,np.array([b_x_commanded_dot,b_y_commanded_dot]).T)
-        tau=2*DRONE_MASS_KG* 1
+        tau=2*DRONE_MASS_KG* 0.5
         p_c = rot_rate[0]/tau * MOI[0] # TODO factor in rotational moment? are p and q body frame moments?
         q_c = rot_rate[1]/tau * MOI[1]
 
@@ -173,7 +173,7 @@ class NonlinearController(object):
             body_rate_cmd: 3-element numpy array (p_cmd,q_cmd,r_cmd) in radians/second^2
             attitude: 3-element numpy array (p,q,r) in radians/second^2
         """
-        body_p = 1
+        body_p = 2
 
         u_bar_p = (body_rate_cmd[0] - body_rate[0]) * body_p * MOI[0]
 
