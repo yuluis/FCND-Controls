@@ -166,27 +166,23 @@ class NonlinearController(object):
 
         return np.array([p_c, q_c])
 
-    def body_rate_control(self, body_rate_cmd, body_rate):
+    def body_rate_control(self, body_rate_cmd, body_rate): # Implementation reviewed (proportional gain controller in body frame with moment of inertia)
         """ Generate the roll, pitch, yaw moment commands in the body frame
         
         Args:R
             body_rate_cmd: 3-element numpy array (p_cmd,q_cmd,r_cmd) in radians/second^2
             attitude: 3-element numpy array (p,q,r) in radians/second^2
         """
-        body_p = 2
+        body_p = 1
 
-        u_bar_p = (body_rate_cmd[0] - body_rate[0]) * body_p * MOI[0]
-
-        u_bar_q = (body_rate_cmd[1] - body_rate[1]) * body_p * MOI[1]
-
-        u_bar_r = (body_rate_cmd[2] - body_rate[2]) * body_p * MOI[2]
-
-        body_new = np.array([u_bar_p, u_bar_q, u_bar_r])
+        u_bar_p = MOI[0] * (body_rate_cmd[0] - body_rate[0]) * body_p  # unit check: body_rate [rad/s^2] MOI [kg x m^2] Newton [kg*m/s^2]
+        u_bar_q = MOI[1] * (body_rate_cmd[1] - body_rate[1]) * body_p
+        u_bar_r = MOI[2] * (body_rate_cmd[2] - body_rate[2]) * body_p
+        body_rate_cmd_adjusted = np.array([u_bar_p, u_bar_q, u_bar_r])
 
         #print("body_rate_control:: time= {0:.4f}, body_rate (cmd, curr, new)".format(timer.time()), body_rate_cmd, body_rate, body_new )
-
         #Returns: 3-element numpy array, desired roll moment, pitch moment, and yaw moment commands in Newtons*meters
-        return body_new
+        return body_rate_cmd_adjusted
 
 
 
@@ -203,7 +199,6 @@ class NonlinearController(object):
         psi_err = (yaw_cmd - yaw)
         r_c = psi_err * yaw_p
 
-        print("yaw_control::time= {0:.4f}, yaw (cmd, curr, new)".format(timer.time()), yaw_cmd, yaw, r_c )
-
+        #print("yaw_control::time= {0:.4f}, yaw (cmd, curr, new)".format(timer.time()), yaw_cmd, yaw, r_c )
         return r_c
 
