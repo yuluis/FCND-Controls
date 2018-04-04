@@ -186,18 +186,20 @@ class NonlinearController(object):
 
 
 
-    def yaw_control(self, yaw_cmd, yaw):
+    def yaw_control(self, yaw_cmd, yaw): # Implementation reviewed but not sure about unit conversion below
         """ Generate the target yawrateD
         
         Args:
-            yaw_cmd: desired vehicle yaw in Dradians
+            yaw_cmd: desired vehicle yaw in radians
             yaw: vehicle yaw in radians
         
-        Returns: target yawrate in radians/secRR
+        Returns: target yawrate in radians/sec
         """
         yaw_p = 1
         psi_err = (yaw_cmd - yaw)
-        r_c = psi_err * yaw_p
+
+        assumed_callback_period = 0.025 # approx 25 milliseconds [s] based on prints
+        r_c = yaw_p * psi_err / assumed_callback_period  # TODO [radians / second]
 
         #print("yaw_control::time= {0:.4f}, yaw (cmd, curr, new)".format(timer.time()), yaw_cmd, yaw, r_c )
         return r_c
