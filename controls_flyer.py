@@ -72,11 +72,11 @@ class ControlsFlyer(UnityDrone):
                 self.local_velocity_target[0:2],
                 self.local_position[0:2],
                 self.local_velocity[0:2])
-        #self.local_acceleration_target = np.array([acceleration_cmd[0],
-        #                                           acceleration_cmd[1],
-        #                                           0.0])
+        self.local_acceleration_target = np.array([acceleration_cmd[0],
+                                                   acceleration_cmd[1],
+                                                   9.81 * 0.5])
         # TODO zero out accelleration for development
-        self.local_acceleration_target = np.array([0.0,0.0, 9.81*0.5])
+
 
     def attitude_controller(self):
 
@@ -103,7 +103,7 @@ class ControlsFlyer(UnityDrone):
 
         self.body_rate_target = np.array(
                 [self.roll_pitch_rate_cmd[0], self.roll_pitch_rate_cmd[1], yawrate_cmd])
-        print("attitude_controller:: roll, pitch, yaw (world)", self.body_rate_target)
+        #print("attitude_controller:: roll, pitch, yaw (world)", self.body_rate_target)
 
     def bodyrate_controller(self):        
         moment_cmd = self.controller.body_rate_control(
