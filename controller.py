@@ -27,6 +27,10 @@ class NonlinearController(object):
         self.rot_mat = np.eye(3)
         self.start_time = timer.time()
 
+        self.accum_yaw_err = 0  # integrator
+        self.yaw_counter = 0
+        self.accum_yaw_accel_update = 0  # current yaw acceleration target
+
         return
 
     def trajectory_control(self, position_trajectory, yaw_trajectory, time_trajectory, current_time):
@@ -117,8 +121,8 @@ class NonlinearController(object):
 
         thrust = DRONE_MASS_KG * c #thrust is in the body frame?
 
-        print("altitude_control:: time= {0:.4f}, b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, accel, thrust)".format(timer.time()),
-             b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff, thrust)
+        #print("altitude_control:: time= {0:.4f}, b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, accel, thrust)".format(timer.time()),
+        #     b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff, thrust)
 
         return thrust  #    Returns: thrust command for the vehicle (+up)
 
@@ -186,8 +190,8 @@ class NonlinearController(object):
 
 
 
-    def yaw_control(self, yaw_cmd, yaw): # Implementation reviewed but not sure about unit conversion below
-        """ Generate the target yawrateD
+    def yaw_control(self, yaw_cmd, yaw): # TODO Implementation reviewed but not sure about unit conversion below
+        """ Generate the target yawrate
         
         Args:
             yaw_cmd: desired vehicle yaw in radians
@@ -195,12 +199,21 @@ class NonlinearController(object):
         
         Returns: target yawrate in radians/sec
         """
-        yaw_p = 1
+        yaw_p = 0.3
         psi_err = (yaw_cmd - yaw)
 
-        assumed_callback_period = 0.025 # approx 25 milliseconds [s] based on prints
-        r_c = yaw_p * psi_err / assumed_callback_period  # TODO [radians / second]
 
-        #print("yaw_control::time= {0:.4f}, yaw (cmd, curr, new)".format(timer.time()), yaw_cmd, yaw, r_c )
+
+        # integrate over 1 second and set acceleration
+        # assume every 40 samples is 1 second, integrate over 1 second to measure acceleration
+        self.accum_yaw_err +=  psi_err
+        self.yaw_counter += 1
+        yaw_counts_per_second = 40
+        if self.yaw_counter % yaw_counts_per_second == 0 :
+            self.accum_yaw_accel_update = self.accum_yaw_err / yaw_counts_per_second
+            self.accum_yaw_err = 0
+        r_c = yaw_p * self.accum_yaw_accel_update  # [radians / second / second] through numerical integration
+
+        print("yaw_control::time= {0:.4f}, yaw (cmd, curr, new)".format(timer.time()), yaw_cmd, yaw, r_c )
         return r_c
 
