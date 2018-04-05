@@ -63,20 +63,16 @@ class ControlsFlyer(UnityDrone):
                  self.yaw_trajectory,
                  self.time_trajectory, time.time())
 
-        self.local_position_target = [0,0,-3.0]  # TODO override local_position_target altitude
-        self.local_velocity_target=[0,0,0]
-        self.attitude_target = np.array((0.0, 0.0, 0.0)) #TODO temporarily set to 0 the yaw
-
         acceleration_cmd = self.controller.lateral_position_control(
                 self.local_position_target[0:2],
                 self.local_velocity_target[0:2],
                 self.local_position[0:2],
                 self.local_velocity[0:2])
-        self.local_acceleration_target = np.array([acceleration_cmd[0],
-                                                   acceleration_cmd[1],
-                                                   9.81 * 0.5])
-        # TODO zero out accelleration for development
 
+        self.local_position_target = [0,0,-3.0]  # TODO override local_position_target altitude
+        self.local_velocity_target=[0,0,0]
+        self.attitude_target = np.array((0.0, 0.0, 0.0))
+        self.local_acceleration_target = np.array([0,0,0])
 
     def attitude_controller(self):
 
@@ -90,6 +86,7 @@ class ControlsFlyer(UnityDrone):
                 -self.local_velocity[2],
                 self.attitude,
                 self.local_acceleration_target[2])
+        self.thrust_cmd = 9.81*0.5 # TODO fix thrust for debugging
 
         #if self.delaycounter % 4 == 0 :
         self.roll_pitch_rate_cmd = self.controller.roll_pitch_controller(

@@ -92,8 +92,18 @@ class NonlinearController(object):
             
         Returns: desired vehicle 2D acceleration in the local frame [north, east]
         """
-        k_p = 0.8
-        k_d = 0.2
+        #TODO come back to this after everything else is working
+        # try slowing down the updates to allow time for inner control loops to work
+        # what is c?
+        # try printing out the values
+        #mot_mat = euler2RM(attitude[0], attitude[1], attitude[2])
+        #b_z = self.rot_mat[2,2]
+        #u_1_bar = p_term + d_term + acceleration_ff #PD controller
+        #c = (u_1_bar - GRAVITY) / b_z #factor in self frame relative to Euler frame, self.g is accel needed to zero out gravity
+
+        k_p = 0.08
+        k_d = 0.02
+        c = 1 # what is this?
         x_err = local_position_cmd[0] - local_position[0]
         x_err_dot = local_velocity_cmd[0] - local_velocity[0]
 
@@ -112,8 +122,8 @@ class NonlinearController(object):
 
         y_dot_dot_command = p_term_y + d_term_y + acceleration_ff[1]
 
-        b_y_c = y_dot_dot_command / c # what the heck is c?
-
+        b_y_c = y_dot_dot_command / c
+        #print("lateral_position_control:: b_x_c, b_y_c", b_x_c, b_y_c)
         return np.array([b_x_c, b_y_c])
     
     def altitude_control(self, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff=0.0):
@@ -148,7 +158,7 @@ class NonlinearController(object):
         return thrust  #    Returns: thrust command for the vehicle (+up)
 
 
-    def roll_pitch_controller(self, acceleration_cmd, attitude, thrust_cmd): # reviewed using solution
+    def roll_pitch_controller(self, acceleration_cmd, attitude, thrust_cmd): # TODO how is thrust used?
         """ Generate the rollrate and pitchrate commands in the body frame
         
         Args:
