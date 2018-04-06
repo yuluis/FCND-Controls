@@ -86,7 +86,7 @@ class ControlsFlyer(UnityDrone):
                 -self.local_velocity[2],
                 self.attitude,
                 self.local_acceleration_target[2])
-        self.thrust_cmd = 9.81*0.5 # TODO fix thrust for debugging
+
 
         #if self.delaycounter % 4 == 0 :
         self.roll_pitch_rate_cmd = self.controller.roll_pitch_controller(
