@@ -30,6 +30,13 @@ class NonlinearController(object):
         self.yaw_counter = 0
         self.accum_yaw_accel_update = 0  # current yaw acceleration target
 
+        #numberical integrator
+        self.accum_b_x_c_err = 0
+        self.accum_b_y_c_err = 0
+        self.accum_counter = 0
+        self.accum_b_x_c = 0
+        self.accum_b_y_c = 0
+
         return
 
     def trajectory_control(self, position_trajectory, yaw_trajectory, time_trajectory, current_time):
@@ -92,16 +99,9 @@ class NonlinearController(object):
             
         Returns: desired vehicle 2D acceleration in the local frame [north, east]
         """
-        # try slowing down the updates to allow time for inner control loops to work
-        # what is c?
-        # try printing out the values
-        #mot_mat = euler2RM(attitude[0], attitude[1], attitude[2])
-        #b_z = self.rot_mat[2,2]
-        #u_1_bar = p_term + d_term + acceleration_ff #PD controller
-        #c = (u_1_bar - GRAVITY) / b_z #factor in self frame relative to Euler frame, self.g is accel needed to zero out gravity
 
-        k_p = 0.08
-        k_d = 0.02
+        k_p = 1
+        k_d = 1
         c = 1 # what is this?
         x_err = local_position_cmd[0] - local_position[0]
         x_err_dot = local_velocity_cmd[0] - local_velocity[0]
@@ -121,9 +121,20 @@ class NonlinearController(object):
 
         y_dot_dot_command = p_term_y + d_term_y + acceleration_ff[1]
 
-        b_y_c = y_dot_dot_command / c
-        #print("lateral_position_control:: b_x_c, b_y_c", b_x_c, b_y_c)
-        return np.array([b_x_c, b_y_c])
+        b_y_c = y_dot_dot_command / c  # integrate over 40 samples, approx 1 second, to determine yaw acceleration correction needed
+
+        self.accum_b_x_c_err += b_x_c
+        self.accum_b_y_c_err += b_y_c
+        self.accum_counter += 1
+        accum_counter_per_second = 4
+        if self.accum_counter % accum_counter_per_second == 0:
+            self.accum_b_x_c = self.accum_b_x_c_err / accum_counter_per_second
+            self.accum_b_x_c_err = 0
+            self.accum_b_y_c = self.accum_b_y_c_err / accum_counter_per_second
+            self.accum_b_y_c_err = 0
+
+        #print("lateral_position_control:: accum_b_x_c, accum_b_y_c", self.accum_b_x_c, self.accum_b_y_c)
+        return np.array([self.accum_b_x_c, self.accum_b_y_c])
     
     def altitude_control(self, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff=0.0):
         """Generate vertical acceleration (thrust) command
@@ -138,8 +149,8 @@ class NonlinearController(object):
         """
         self.rot_mat = euler2RM(*attitude) # unpack attitude 3-tuple
         b_z = self.rot_mat[2,2]
-        z_k_p = 20
-        z_k_d = 4
+        z_k_p = 1
+        z_k_d = 1
 
         z_err = altitude_cmd - altitude
         z_err_dot = vertical_velocity_cmd - vertical_velocity
@@ -153,8 +164,8 @@ class NonlinearController(object):
 
         if thrust > 15 :
             pass
-        print("altitude_control:: time= {0:.4f}, b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, accel, thrust)".format(timer.time()),
-             b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff, thrust)
+        #print("altitude_control:: time= {0:.4f}, b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, accel, thrust)".format(timer.time()),
+        #     b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff, thrust)
 
         return thrust
 
@@ -170,7 +181,7 @@ class NonlinearController(object):
         Returns: 2-element numpy array, desired rollrate (p) and pitchrate (q) commands in radians/s
         """
 
-        k_p_rollpitch = 23
+        k_p_rollpitch = 1
 
         self.rot_mat = euler2RM (attitude[0], attitude[1],attitude[2])
         b_x = self.rot_mat[0, 2]
@@ -191,10 +202,11 @@ class NonlinearController(object):
         q_c = rot_rate[1]/tau
 
 
-        print("roll_pitch_controller:: time= {0:.4f}, accel cmd, attitude, thrust_cmd, p_c, q_c)".format(timer.time()),
-              acceleration_cmd, attitude, thrust_cmd, np.array([p_c, q_c]) )
-
-        return np.array([p_c, q_c])
+        #print("roll_pitch_controller:: time= {0:.4f}, accel cmd, attitude, thrust_cmd, p_c, q_c)".format(timer.time()),
+        #      acceleration_cmd, attitude, thrust_cmd, np.array([p_c, q_c]) )
+        ret = [p_c, q_c]
+        ret2 = np.clip(ret, -np.pi/6, np.pi/6)
+        return np.array(ret2)
 
     def body_rate_control(self, body_rate_cmd, body_rate): # Implementation reviewed (proportional gain controller in body frame with moment of inertia)
         """ Generate the roll, pitch, yaw moment commands in the body frame
@@ -203,7 +215,7 @@ class NonlinearController(object):
             body_rate_cmd: 3-element numpy array (p_cmd,q_cmd,r_cmd) in radians/second^2
             attitude: 3-element numpy array (p,q,r) in radians/second^2
         """
-        body_p = 0.3
+        body_p = 1
 
         u_bar_p = MOI[0] * (body_rate_cmd[0] - body_rate[0]) * body_p  # unit check: body_rate [rad/s^2] MOI [kg x m^2] Newton [kg*m/s^2]
         u_bar_q = MOI[1] * (body_rate_cmd[1] - body_rate[1]) * body_p  # assume rotation moments apply in the body frame
@@ -225,13 +237,13 @@ class NonlinearController(object):
         
         Returns: target yawrate in radians/sec
         """
-        yaw_p = 0.3
+        yaw_p = 1
         psi_err = (yaw_cmd - yaw)
 
-        # integrate over 40 samples, approx 1 second, to determine yaw acceleration correction needed
+        # integrator smoothing
         self.accum_yaw_err +=  psi_err
         self.yaw_counter += 1
-        yaw_counts_per_second = 40
+        yaw_counts_per_second = 4
         if self.yaw_counter % yaw_counts_per_second == 0 :
             self.accum_yaw_accel_update = self.accum_yaw_err / yaw_counts_per_second
             self.accum_yaw_err = 0

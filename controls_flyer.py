@@ -62,17 +62,16 @@ class ControlsFlyer(UnityDrone):
                  self.position_trajectory,
                  self.yaw_trajectory,
                  self.time_trajectory, time.time())
+        #print("position_controller: position, velocity, yaw", self.local_position_target, self.local_velocity_target, yaw_cmd)
 
         acceleration_cmd = self.controller.lateral_position_control(
                 self.local_position_target[0:2],
                 self.local_velocity_target[0:2],
                 self.local_position[0:2],
                 self.local_velocity[0:2])
-
-        self.local_position_target = [0,0,-3.0]  # TODO override local_position_target altitude
-        self.local_velocity_target=[0,0,0]
-        self.attitude_target = np.array((0.0, 0.0, 0.0))
-        self.local_acceleration_target = np.array([0,0,0])
+        self.local_position_target = np.array([0.0,0.0,-3.0])
+        self.local_velocity_target = np.array([0.0,0.0,0.0])
+        self.local_acceleration_target = np.array([0.0,0.0,0.0]) #TODO debug
 
     def attitude_controller(self):
 

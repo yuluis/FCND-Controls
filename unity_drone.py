@@ -148,6 +148,8 @@ class UnityDrone(Drone):
         self._vertical_error = self.calculate_vertical_error()
         self.all_vertical_errors = np.append(self.all_vertical_errors,self._vertical_error)
         self._mission_time = time.clock() - self._time0
+        print("time, horizontal err, vertical err", self._mission_time, self._horizontal_error, self._vertical_error)
+
         self.all_times = np.append(self.all_times,self._mission_time)
         self.check_mission_success()
         if self._visdom_connected:
