@@ -31,6 +31,8 @@ class NonlinearController(object):
         self.yaw_counter = 0
         self.accum_yaw_accel_update = 0  # current yaw acceleration target
 
+        self.integrated_error_list = [0, 0, 0, 0,0,0,0,0,0,0,0,0,0,0,0,0] # altitude integrator
+        self.lat_integrated_error_list = [0, 0, 0, 0,0,0,0,0,0,0,0,0,0,0,0,0] # latitude integrator
         return
 
     def trajectory_control(self, position_trajectory, yaw_trajectory, time_trajectory, current_time):
@@ -101,16 +103,31 @@ class NonlinearController(object):
         #u_1_bar = p_term + d_term + acceleration_ff #PD controller
         #c = (u_1_bar - GRAVITY) / b_z #factor in self frame relative to Euler frame, self.g is accel needed to zero out gravity
 
-        k_p = 4
-        k_d = 0.2
-        c = 1 # what is this?
+        k_p = 0.4
+        k_d = 0.1
+        k_i = 0.1
+        dt = 0.025 # 25 ms sampling
+
+        c = 1 # TODO what is this?
         x_err = local_position_cmd[0] - local_position[0]
+
+
+        self.lat_integrated_error_list.append(x_err*dt)
+        self.lat_integrated_error_list.pop(0)
+        integrated_error = 0
+        for n in self.lat_integrated_error_list :
+            integrated_error += n
+
+        i = integrated_error * k_i
+
+
+
         x_err_dot = local_velocity_cmd[0] - local_velocity[0]
 
         p_term_x = k_p * x_err
         d_term_x = k_d * x_err_dot
 
-        x_dot_dot_command = p_term_x + d_term_x + acceleration_ff[0]
+        x_dot_dot_command = p_term_x + i + d_term_x + acceleration_ff[0]
 
         b_x_c = x_dot_dot_command / c
 
@@ -124,7 +141,7 @@ class NonlinearController(object):
 
         b_y_c = y_dot_dot_command / c
         #print("lateral_position_control:: b_x_c, b_y_c", b_x_c, b_y_c)
-        return np.array([b_x_c, b_y_c]).clip(-1,1)
+        return np.array([b_x_c, b_y_c]).clip(-1.1,1.1)
     
     def altitude_control(self, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff=0.0):
         """Generate vertical acceleration (thrust) command
@@ -140,22 +157,35 @@ class NonlinearController(object):
         """
         self.rot_mat = euler2RM(*attitude) # unpack attitude 3-tuple
         b_z = self.rot_mat[2,2]
-        z_k_p = 2
-        z_k_d = 0.3
+        z_k_p = 60.0
+        z_k_d = 20.0
 
         z_err = altitude_cmd - altitude
         z_err_dot = vertical_velocity_cmd - vertical_velocity
         p_term = z_k_p * z_err          # proportional error
         d_term = z_k_d * z_err_dot      # derivative error
 
-        u_1_bar = -p_term - d_term + acceleration_ff #PD controller
+
+
+        k_i = 40
+        dt = 0.025 # 25 ms sampling
+
+        self.integrated_error_list.append(z_err*dt)
+        self.integrated_error_list.pop(0)
+        integrated_error = 0
+        for n in self.integrated_error_list :
+            integrated_error += n
+
+        i = integrated_error * k_i
+
+        u_1_bar = p_term + i + d_term + acceleration_ff #PD controller
         c = (u_1_bar + GRAVITY) / b_z
 
-        thrust = DRONE_MASS_KG * -c
+        thrust = DRONE_MASS_KG * c
 
-        #print("altitude_control:: time= {0:.4f}, b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, accel, thrust)".format(timer.time()),
-        #     b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff, thrust)
-
+        print("altitude_control:: time= {0:.4f}, b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, accel, thrust)".format(timer.time()),
+             b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff, thrust)
+        print("z_err, z_err_dot, p_term, d_term, accel_ff", z_err,z_err_dot,p_term,d_term, acceleration_ff)
         return thrust
 
 
@@ -170,7 +200,7 @@ class NonlinearController(object):
         Returns: 2-element numpy array, desired rollrate (p) and pitchrate (q) commands in radians/s
         """
 
-        k_p_rollpitch = 10
+        k_p_rollpitch = 8
 
         self.rot_mat = euler2RM (attitude[0], attitude[1],attitude[2])
         b_x = self.rot_mat[0, 2]
@@ -203,7 +233,7 @@ class NonlinearController(object):
             body_rate_cmd: 3-element numpy array (p_cmd,q_cmd,r_cmd) in radians/second^2
             body_rate: 3-element numpy array (p,q,r) in radians/second^2
         """
-        body_p = 0.7
+        body_p = 10
 
         u_bar_p = MOI[0] * (body_rate_cmd[0] - body_rate[0]) * body_p  # unit check: body_rate [rad/s^2] MOI [kg x m^2] Newton [kg*m/s^2]
         u_bar_q = MOI[1] * (body_rate_cmd[1] - body_rate[1]) * body_p  # assume rotation moments apply in the body frame
@@ -225,7 +255,7 @@ class NonlinearController(object):
         
         Returns: target yawrate in radians/sec
         """
-        yaw_p = 0.7
+        yaw_p = 0.04
         psi_err = (yaw_cmd - yaw)
 
         # integrate over 40 samples, approx 1 second, to determine yaw acceleration correction needed

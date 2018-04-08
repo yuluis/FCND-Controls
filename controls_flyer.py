@@ -139,7 +139,6 @@ class ControlsFlyer(UnityDrone):
                 if len(self.all_waypoints) > 0:
                     self.waypoint_transition()
                 else:
-                    self.landing_transition() #TODO just stop for debugging ease
                     if np.linalg.norm(self.local_velocity[0:2]) < 1.0:
                         self.landing_transition()
                         pass
