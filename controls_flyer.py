@@ -73,6 +73,7 @@ class ControlsFlyer(UnityDrone):
         #self.local_position_target = [0,0,-3.0]  # TODO override local_position_target altitude
         #self.local_velocity_target=[0,0,0]
         #self.attitude_target = np.array((0.0, 0.0, 0.0))
+        print("position_controller: acceleration xy", acceleration_cmd)
 
 
     def attitude_controller(self):
@@ -128,7 +129,7 @@ class ControlsFlyer(UnityDrone):
                 #self.all_waypoints = self.calculate_box()
                 (self.position_trajectory,
                  self.time_trajectory,
-                 self.yaw_trajectory) = self.load_test_trajectory(time_mult=0.5)
+                 self.yaw_trajectory) = self.load_test_trajectory(time_mult=1.0)
                 self.all_waypoints = self.position_trajectory.copy()
                 self.waypoint_number = -1
                 self.waypoint_transition()
@@ -138,6 +139,7 @@ class ControlsFlyer(UnityDrone):
                 if len(self.all_waypoints) > 0:
                     self.waypoint_transition()
                 else:
+                    self.landing_transition() #TODO just stop for debugging ease
                     if np.linalg.norm(self.local_velocity[0:2]) < 1.0:
                         self.landing_transition()
                         pass
