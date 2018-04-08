@@ -283,6 +283,10 @@ class UnityDrone(Drone):
         
         """
         target_position = np.array([self._target_north,self._target_east])
+        if np.linalg.norm(target_position-self.local_position[0:2]) > 2 :
+            print("WARNING: out of spec target, local", target_position, self.local_position[0:2])
+        else :
+            print("nominal: spec                     ", target_position, self.local_position[0:2])
         return np.linalg.norm(target_position-self.local_position[0:2])
     
     def calculate_vertical_error(self):

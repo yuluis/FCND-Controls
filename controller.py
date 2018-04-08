@@ -103,8 +103,8 @@ class NonlinearController(object):
         #u_1_bar = p_term + d_term + acceleration_ff #PD controller
         #c = (u_1_bar - GRAVITY) / b_z #factor in self frame relative to Euler frame, self.g is accel needed to zero out gravity
 
-        k_p = 0.4
-        k_d = 0.1
+        k_p = 0.8
+        k_d = 0.4
         k_i = 0.1
         dt = 0.025 # 25 ms sampling
 
@@ -140,8 +140,11 @@ class NonlinearController(object):
         y_dot_dot_command = p_term_y + d_term_y + acceleration_ff[1]
 
         b_y_c = y_dot_dot_command / c
-        #print("lateral_position_control:: b_x_c, b_y_c", b_x_c, b_y_c)
-        return np.array([b_x_c, b_y_c]).clip(-1.1,1.1)
+        print("lateral_position_control:: b_x_c, b_y_c", np.array([b_x_c, b_y_c]).clip(-2,2))
+        if (np.array([b_x_c, b_y_c]) - np.array([b_x_c, b_y_c]).clip(-2,2)).any() :
+            print ("CLIPPING lateral_position")
+
+        return np.array([b_x_c, b_y_c]).clip(-2,2)
     
     def altitude_control(self, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff=0.0):
         """Generate vertical acceleration (thrust) command
@@ -157,7 +160,7 @@ class NonlinearController(object):
         """
         self.rot_mat = euler2RM(*attitude) # unpack attitude 3-tuple
         b_z = self.rot_mat[2,2]
-        z_k_p = 60.0
+        z_k_p = 40.0
         z_k_d = 20.0
 
         z_err = altitude_cmd - altitude
@@ -167,7 +170,7 @@ class NonlinearController(object):
 
 
 
-        k_i = 40
+        k_i = 20
         dt = 0.025 # 25 ms sampling
 
         self.integrated_error_list.append(z_err*dt)
@@ -200,7 +203,7 @@ class NonlinearController(object):
         Returns: 2-element numpy array, desired rollrate (p) and pitchrate (q) commands in radians/s
         """
 
-        k_p_rollpitch = 8
+        k_p_rollpitch = 14
 
         self.rot_mat = euler2RM (attitude[0], attitude[1],attitude[2])
         b_x = self.rot_mat[0, 2]
@@ -223,8 +226,10 @@ class NonlinearController(object):
 
         print("roll_pitch_controller:: time= {0:.4f}, accel cmd, attitude, thrust_cmd, p_c, q_c)".format(timer.time()),
               acceleration_cmd, attitude, thrust_cmd, np.array([p_c, q_c]) )
-
-        return np.array([p_c, q_c]).clip(-np.pi/12,np.pi/12)
+        roll_pitch_clip_value = np.radians(70)
+        if (np.array([p_c, q_c]) - np.array([p_c, q_c]).clip(-roll_pitch_clip_value,roll_pitch_clip_value)).any() :
+            print ("CLIPPING roll_pitch")
+        return np.array([p_c, q_c]).clip(-roll_pitch_clip_value,roll_pitch_clip_value)
 
     def body_rate_control(self, body_rate_cmd, body_rate): # Implementation reviewed (proportional gain controller in body frame with moment of inertia)
         """ Generate the roll, pitch, yaw moment commands in the body frame
@@ -233,7 +238,7 @@ class NonlinearController(object):
             body_rate_cmd: 3-element numpy array (p_cmd,q_cmd,r_cmd) in radians/second^2
             body_rate: 3-element numpy array (p,q,r) in radians/second^2
         """
-        body_p = 10
+        body_p = 13
 
         u_bar_p = MOI[0] * (body_rate_cmd[0] - body_rate[0]) * body_p  # unit check: body_rate [rad/s^2] MOI [kg x m^2] Newton [kg*m/s^2]
         u_bar_q = MOI[1] * (body_rate_cmd[1] - body_rate[1]) * body_p  # assume rotation moments apply in the body frame
