@@ -152,10 +152,8 @@ class NonlinearController(object):
 
         thrust = DRONE_MASS_KG * -c
 
-        if thrust > 15 :
-            pass
-        print("altitude_control:: time= {0:.4f}, b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, accel, thrust)".format(timer.time()),
-             b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff, thrust)
+        #print("altitude_control:: time= {0:.4f}, b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, accel, thrust)".format(timer.time()),
+        #     b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff, thrust)
 
         return thrust
 
@@ -204,7 +202,7 @@ class NonlinearController(object):
             body_rate_cmd: 3-element numpy array (p_cmd,q_cmd,r_cmd) in radians/second^2
             attitude: 3-element numpy array (p,q,r) in radians/second^2
         """
-        body_p = 0.3
+        body_p = 0.7
 
         u_bar_p = MOI[0] * (body_rate_cmd[0] - body_rate[0]) * body_p  # unit check: body_rate [rad/s^2] MOI [kg x m^2] Newton [kg*m/s^2]
         u_bar_q = MOI[1] * (body_rate_cmd[1] - body_rate[1]) * body_p  # assume rotation moments apply in the body frame
@@ -226,13 +224,13 @@ class NonlinearController(object):
         
         Returns: target yawrate in radians/sec
         """
-        yaw_p = 0.3
+        yaw_p = 0.7
         psi_err = (yaw_cmd - yaw)
 
         # integrate over 40 samples, approx 1 second, to determine yaw acceleration correction needed
         self.accum_yaw_err +=  psi_err
         self.yaw_counter += 1
-        yaw_counts_per_second = 40
+        yaw_counts_per_second = 4
         if self.yaw_counter % yaw_counts_per_second == 0 :
             self.accum_yaw_accel_update = self.accum_yaw_err / yaw_counts_per_second
             self.accum_yaw_err = 0

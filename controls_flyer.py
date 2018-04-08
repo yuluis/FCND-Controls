@@ -68,11 +68,12 @@ class ControlsFlyer(UnityDrone):
                 self.local_velocity_target[0:2],
                 self.local_position[0:2],
                 self.local_velocity[0:2])
+        self.local_acceleration_target = np.array([acceleration_cmd[0], acceleration_cmd[1], 0])
 
-        self.local_position_target = [0,0,-3.0]  # TODO override local_position_target altitude
-        self.local_velocity_target=[0,0,0]
-        self.attitude_target = np.array((0.0, 0.0, 0.0))
-        self.local_acceleration_target = np.array([0,0,0])
+        #self.local_position_target = [0,0,-3.0]  # TODO override local_position_target altitude
+        #self.local_velocity_target=[0,0,0]
+        #self.attitude_target = np.array((0.0, 0.0, 0.0))
+
 
     def attitude_controller(self):
 
@@ -192,10 +193,10 @@ class ControlsFlyer(UnityDrone):
         self.waypoint_number = self.waypoint_number + 1
         self.target_position = self.all_waypoints.pop(0)
 
-        #self.local_position_target = np.array(
-        #    (self.target_position[0], self.target_position[1], self.target_position[2]))
-
-        self.local_position_target = np.array([0.0, 0.0, -3.0]) # TODO set local_position_target fixed for debugging
+        self.local_position_target = np.array(
+            (self.target_position[0], self.target_position[1], self.target_position[2]))
+        print("waypoint transition: target_position", self.target_position)
+        #self.local_position_target = np.array([0.0, 0.0, -3.0]) # TODO set local_position_target fixed for debugging
         self.flight_state = States.WAYPOINT
 
     def landing_transition(self):
