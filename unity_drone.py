@@ -148,8 +148,6 @@ class UnityDrone(Drone):
         self._vertical_error = self.calculate_vertical_error()
         self.all_vertical_errors = np.append(self.all_vertical_errors,self._vertical_error)
         self._mission_time = time.clock() - self._time0
-        print("time, horizontal err, vertical err", self._mission_time, self._horizontal_error, self._vertical_error)
-
         self.all_times = np.append(self.all_times,self._mission_time)
         self.check_mission_success()
         if self._visdom_connected:
@@ -285,6 +283,10 @@ class UnityDrone(Drone):
         
         """
         target_position = np.array([self._target_north,self._target_east])
+        if np.linalg.norm(target_position-self.local_position[0:2]) > 2 :
+            print("WARNING: out of spec target, local", target_position, self.local_position[0:2])
+        else :
+            print("nominal: spec                     ", target_position, self.local_position[0:2])
         return np.linalg.norm(target_position-self.local_position[0:2])
     
     def calculate_vertical_error(self):
