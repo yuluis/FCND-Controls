@@ -140,7 +140,7 @@ class NonlinearController(object):
         y_dot_dot_command = p_term_y + d_term_y + acceleration_ff[1]
 
         b_y_c = y_dot_dot_command / c
-        print("lateral_position_control:: b_x_c, b_y_c", np.array([b_x_c, b_y_c]).clip(-2,2))
+        #print("lateral_position_control:: b_x_c, b_y_c", np.array([b_x_c, b_y_c]).clip(-2,2))
         if (np.array([b_x_c, b_y_c]) - np.array([b_x_c, b_y_c]).clip(-2,2)).any() :
             print ("CLIPPING lateral_position")
 
@@ -186,9 +186,9 @@ class NonlinearController(object):
 
         thrust = DRONE_MASS_KG * c
 
-        print("altitude_control:: time= {0:.4f}, b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, accel, thrust)".format(timer.time()),
-             b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff, thrust)
-        print("z_err, z_err_dot, p_term, d_term, accel_ff", z_err,z_err_dot,p_term,d_term, acceleration_ff)
+        #print("altitude_control:: time= {0:.4f}, b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, accel, thrust)".format(timer.time()),
+        #     b_z, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff, thrust)
+        #print("z_err, z_err_dot, p_term, d_term, accel_ff", z_err,z_err_dot,p_term,d_term, acceleration_ff)
         return thrust
 
 
@@ -224,8 +224,8 @@ class NonlinearController(object):
         q_c = rot_rate[1]/tau
 
 
-        print("roll_pitch_controller:: time= {0:.4f}, accel cmd, attitude, thrust_cmd, p_c, q_c)".format(timer.time()),
-              acceleration_cmd, attitude, thrust_cmd, np.array([p_c, q_c]) )
+       # print("roll_pitch_controller:: time= {0:.4f}, accel cmd, attitude, thrust_cmd, p_c, q_c)".format(timer.time()),
+       #       acceleration_cmd, attitude, thrust_cmd, np.array([p_c, q_c]) )
         roll_pitch_clip_value = np.radians(70)
         if (np.array([p_c, q_c]) - np.array([p_c, q_c]).clip(-roll_pitch_clip_value,roll_pitch_clip_value)).any() :
             print ("CLIPPING roll_pitch")
@@ -260,7 +260,7 @@ class NonlinearController(object):
         
         Returns: target yawrate in radians/sec
         """
-        yaw_p = 0.04
+        yaw_p = 5
         psi_err = (yaw_cmd - yaw)
 
         # integrate over 40 samples, approx 1 second, to determine yaw acceleration correction needed
@@ -272,6 +272,6 @@ class NonlinearController(object):
             self.accum_yaw_err = 0
         r_c = yaw_p * self.accum_yaw_accel_update
 
-        #print("yaw_control::time= {0:.4f}, yaw (cmd, curr, new)".format(timer.time()), yaw_cmd, yaw, r_c )
+        print("yaw_control::time= {0:.4f}, yaw (cmd, curr, new)".format(timer.time()), yaw_cmd, yaw, r_c )
         return r_c
 
