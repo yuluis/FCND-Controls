@@ -119,52 +119,27 @@ class NonlinearController(object):
             
         Returns: desired vehicle 2D acceleration in the local frame [north, east]
         """
-        # try slowing down the updates to allow time for inner control loops to work
-        # what is c?
-        # try printing out the values
-        #mot_mat = euler2RM(attitude[0], attitude[1], attitude[2])
-        #b_z = self.rot_mat[2,2]
-        #u_1_bar = p_term + d_term + acceleration_ff #PD controller
-        #c = (u_1_bar - GRAVITY) / b_z #factor in self frame relative to Euler frame, self.g is accel needed to zero out gravity
+        #self.lat_integrated_error_list.append(x_err * self.dt)
+        #self.lat_integrated_error_list.pop(0)
+        #integrated_error = 0
+        #for n in self.lat_integrated_error_list :
+        #    integrated_error += n
+        #i = integrated_error * self.kiPosXY
 
 
-        c = 1 # TODO what is this?
         x_err = local_position_cmd[0] - local_position[0]
-
-
-        self.lat_integrated_error_list.append(x_err * self.dt)
-        self.lat_integrated_error_list.pop(0)
-        integrated_error = 0
-        for n in self.lat_integrated_error_list :
-            integrated_error += n
-
-        i = integrated_error * self.kiPosXY
-
-
-
         x_err_dot = local_velocity_cmd[0] - local_velocity[0]
 
-        p_term_x = self.kpPosXY * x_err
-        d_term_x = self.kpVelXY * x_err_dot
-
-        x_dot_dot_command = p_term_x + i + d_term_x + acceleration_ff[0]
-
-        b_x_c = x_dot_dot_command / c
+        x_dot_dot_target = self.kpPosXY * x_err + self.kpVelXY * x_err_dot + acceleration_ff[0]
 
         y_err = local_position_cmd[1] - local_position[1]
         y_err_dot = local_velocity_cmd[1] - local_velocity[1]
 
-        p_term_y = self.kpPosXY * y_err
-        d_term_y = self.kpVelXY * y_err_dot
+        y_dot_dot_target = self.kpPosXY * y_err + self.kpVelXY * y_err_dot + acceleration_ff[1]
 
-        y_dot_dot_command = p_term_y + d_term_y + acceleration_ff[1]
+        phi_command = np.array([x_dot_dot_target, y_dot_dot_target])
+        return phi_command
 
-        b_y_c = y_dot_dot_command / c
-        #print("lateral_position_control:: b_x_c, b_y_c", np.array([b_x_c, b_y_c]).clip(-2,2))
-        if (np.array([b_x_c, b_y_c]) - np.array([b_x_c, b_y_c]).clip(-2,2)).any() :
-            print ("CLIPPING lateral_position")
-
-        return np.array([b_x_c, b_y_c]).clip(-2,2)
     
     def altitude_control(self, altitude_cmd, vertical_velocity_cmd, altitude, vertical_velocity, attitude, acceleration_ff=0.0):
         """Generate vertical acceleration (thrust) command
