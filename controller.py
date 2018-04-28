@@ -254,17 +254,10 @@ class NonlinearController(object):
         Returns: target yawrate in radians/sec
         """
 
-        psi_err = (yaw_cmd - yaw)
-
-        # integrate over 40 samples, approx 1 second, to determine yaw acceleration correction needed
-        self.accum_yaw_err +=  psi_err
-        self.yaw_counter += 1
-        yaw_counts_per_second = 4
-        if self.yaw_counter % yaw_counts_per_second == 0 :
-            self.accum_yaw_accel_update = self.accum_yaw_err / yaw_counts_per_second
-            self.accum_yaw_err = 0
-        r_c = self.kpYaw * self.accum_yaw_accel_update
-
-        print("yaw_control::time= {0:.4f}, yaw (cmd, curr, new)".format(timer.time()), yaw_cmd, yaw, r_c )
-        return r_c
+        yaw_error = yaw_cmd - yaw
+        if yaw_error > np.pi:
+            yaw_error = yaw_error - 2.0 * np.pi
+        elif yaw_error < -np.pi:
+            yaw_error = yaw_error + 2.0 * np.pi
+        return self.kpYaw * yaw_error
 
