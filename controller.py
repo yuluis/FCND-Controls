@@ -199,12 +199,14 @@ class NonlinearController(object):
 
 
         self.rot_mat = euler2RM (attitude[0], attitude[1],attitude[2])
+        c = -thrust_cmd/DRONE_MASS_KG
+
         b_x = self.rot_mat[0, 2]
-        b_x_err = -acceleration_cmd[0]/thrust_cmd - b_x # TODO how does this work?
+        b_x_err = acceleration_cmd[0]/c - b_x
         b_x_p_term = self.kpBank * b_x_err
 
         b_y = self.rot_mat[1, 2]
-        b_y_err = -acceleration_cmd[1]/thrust_cmd - b_y
+        b_y_err = acceleration_cmd[1]/c - b_y
         b_y_p_term = self.kpBank * b_y_err
         b_x_commanded_dot = b_x_p_term
         b_y_commanded_dot = b_y_p_term
@@ -212,10 +214,8 @@ class NonlinearController(object):
         rot_mat1=np.array([[self.rot_mat[1,0],-self.rot_mat[0,0]],[self.rot_mat[1,1],-self.rot_mat[0,1]]])/self.rot_mat[2,2]
         rot_rate = np.matmul(rot_mat1,np.array([b_x_commanded_dot,b_y_commanded_dot]).T)
 
-
         p_c = rot_rate[0]
         q_c = rot_rate[1]
-
 
        # print("roll_pitch_controller:: time= {0:.4f}, accel cmd, attitude, thrust_cmd, p_c, q_c)".format(timer.time()),
        #       acceleration_cmd, attitude, thrust_cmd, np.array([p_c, q_c]) )
