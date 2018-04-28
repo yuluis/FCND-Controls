@@ -202,11 +202,13 @@ class NonlinearController(object):
         c = -thrust_cmd/DRONE_MASS_KG
 
         b_x = self.rot_mat[0, 2]
-        b_x_err = acceleration_cmd[0]/c - b_x
+        b_x_c = (acceleration_cmd[0]/c).clip(-self.maxTiltAngle, self.maxTiltAngle) # constrain commandeded tilt (R[0,2])
+        b_x_err = b_x_c - b_x
         b_x_p_term = self.kpBank * b_x_err
 
         b_y = self.rot_mat[1, 2]
-        b_y_err = acceleration_cmd[1]/c - b_y
+        b_y_c = (acceleration_cmd[1]/c).clip(-self.maxTiltAngle, self.maxTiltAngle)
+        b_y_err = b_y_c - b_y
         b_y_p_term = self.kpBank * b_y_err
         b_x_commanded_dot = b_x_p_term
         b_y_commanded_dot = b_y_p_term
