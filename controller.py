@@ -23,6 +23,30 @@ class NonlinearController(object):
 
     def __init__(self):
         """Initialize the controller object and control gains"""
+        # Position
+        self.kpPosXY = 1.5
+        self.kpPosZ  = 6.0
+        self.kiPosXY = 0.3
+        self.kiPosZ  = 20.0
+
+        # Velocity
+        self.kpVelXY = 3.0
+        self.kpVelZ  = 1.5
+        self.kpAccFF = 0.05
+
+        # Angle
+        self.kpBank = 10.0
+        self.kpYaw  = 1.8
+
+        # Angle rate
+        self.kpPQR = np.array([20.0, 20.0, 5.0])
+
+        self.dt = 0.025 # 25 ms sampling
+
+        self.maxAccelXY     = 11.0 # m/s^2
+        self.maxAscentRate  =  6.0 # m/s
+        self.maxDescentRate =  2.0 # m/s
+        self.maxTiltAngle   =  1.0 # radians
 
         self.rot_mat = np.eye(3)
         self.start_time = timer.time()
@@ -103,29 +127,25 @@ class NonlinearController(object):
         #u_1_bar = p_term + d_term + acceleration_ff #PD controller
         #c = (u_1_bar - GRAVITY) / b_z #factor in self frame relative to Euler frame, self.g is accel needed to zero out gravity
 
-        k_p = 0.8
-        k_d = 0.4
-        k_i = 0.1
-        dt = 0.025 # 25 ms sampling
 
         c = 1 # TODO what is this?
         x_err = local_position_cmd[0] - local_position[0]
 
 
-        self.lat_integrated_error_list.append(x_err*dt)
+        self.lat_integrated_error_list.append(x_err * self.dt)
         self.lat_integrated_error_list.pop(0)
         integrated_error = 0
         for n in self.lat_integrated_error_list :
             integrated_error += n
 
-        i = integrated_error * k_i
+        i = integrated_error * self.kiPosXY
 
 
 
         x_err_dot = local_velocity_cmd[0] - local_velocity[0]
 
-        p_term_x = k_p * x_err
-        d_term_x = k_d * x_err_dot
+        p_term_x = self.kpPosXY * x_err
+        d_term_x = self.kpVelXY * x_err_dot
 
         x_dot_dot_command = p_term_x + i + d_term_x + acceleration_ff[0]
 
@@ -134,8 +154,8 @@ class NonlinearController(object):
         y_err = local_position_cmd[1] - local_position[1]
         y_err_dot = local_velocity_cmd[1] - local_velocity[1]
 
-        p_term_y = k_p * y_err
-        d_term_y = k_d * y_err_dot
+        p_term_y = self.kpPosXY * y_err
+        d_term_y = self.kpVelXY * y_err_dot
 
         y_dot_dot_command = p_term_y + d_term_y + acceleration_ff[1]
 
@@ -160,26 +180,25 @@ class NonlinearController(object):
         """
         self.rot_mat = euler2RM(*attitude) # unpack attitude 3-tuple
         b_z = self.rot_mat[2,2]
-        z_k_p = 40.0
-        z_k_d = 20.0
+
 
         z_err = altitude_cmd - altitude
         z_err_dot = vertical_velocity_cmd - vertical_velocity
-        p_term = z_k_p * z_err          # proportional error
-        d_term = z_k_d * z_err_dot      # derivative error
+        p_term = self.kpPosZ * z_err          # proportional error
+        d_term = self.kpVelZ * z_err_dot      # derivative error
 
 
 
-        k_i = 20
-        dt = 0.025 # 25 ms sampling
 
-        self.integrated_error_list.append(z_err*dt)
+
+
+        self.integrated_error_list.append(z_err*self.dt)
         self.integrated_error_list.pop(0)
         integrated_error = 0
         for n in self.integrated_error_list :
             integrated_error += n
 
-        i = integrated_error * k_i
+        i = integrated_error * self.kiPosZ
 
         u_1_bar = p_term + i + d_term + acceleration_ff #PD controller
         c = (u_1_bar + GRAVITY) / b_z
@@ -203,25 +222,24 @@ class NonlinearController(object):
         Returns: 2-element numpy array, desired rollrate (p) and pitchrate (q) commands in radians/s
         """
 
-        k_p_rollpitch = 14
 
         self.rot_mat = euler2RM (attitude[0], attitude[1],attitude[2])
         b_x = self.rot_mat[0, 2]
         b_x_err = -acceleration_cmd[0]/thrust_cmd - b_x # TODO how does this work?
-        b_x_p_term = k_p_rollpitch * b_x_err
+        b_x_p_term = self.kpBank * b_x_err
 
         b_y = self.rot_mat[1, 2]
         b_y_err = -acceleration_cmd[1]/thrust_cmd - b_y
-        b_y_p_term = k_p_rollpitch * b_y_err
+        b_y_p_term = self.kpBank * b_y_err
         b_x_commanded_dot = b_x_p_term
         b_y_commanded_dot = b_y_p_term
 
         rot_mat1=np.array([[self.rot_mat[1,0],-self.rot_mat[0,0]],[self.rot_mat[1,1],-self.rot_mat[0,1]]])/self.rot_mat[2,2]
         rot_rate = np.matmul(rot_mat1,np.array([b_x_commanded_dot,b_y_commanded_dot]).T)
 
-        tau=2*DRONE_MASS_KG* 1.0
-        p_c = rot_rate[0]/tau
-        q_c = rot_rate[1]/tau
+
+        p_c = rot_rate[0]
+        q_c = rot_rate[1]
 
 
        # print("roll_pitch_controller:: time= {0:.4f}, accel cmd, attitude, thrust_cmd, p_c, q_c)".format(timer.time()),
@@ -238,11 +256,11 @@ class NonlinearController(object):
             body_rate_cmd: 3-element numpy array (p_cmd,q_cmd,r_cmd) in radians/second^2
             body_rate: 3-element numpy array (p,q,r) in radians/second^2
         """
-        body_p = 13
 
-        u_bar_p = MOI[0] * (body_rate_cmd[0] - body_rate[0]) * body_p  # unit check: body_rate [rad/s^2] MOI [kg x m^2] Newton [kg*m/s^2]
-        u_bar_q = MOI[1] * (body_rate_cmd[1] - body_rate[1]) * body_p  # assume rotation moments apply in the body frame
-        u_bar_r = MOI[2] * (body_rate_cmd[2] - body_rate[2]) * body_p
+
+        u_bar_p = MOI[0] * (body_rate_cmd[0] - body_rate[0]) * self.kpPQR[0]  # unit check: body_rate [rad/s^2] MOI [kg x m^2] Newton [kg*m/s^2]
+        u_bar_q = MOI[1] * (body_rate_cmd[1] - body_rate[1]) * self.kpPQR[1]  # assume rotation moments apply in the body frame
+        u_bar_r = MOI[2] * (body_rate_cmd[2] - body_rate[2]) * self.kpPQR[2]
         body_rate_cmd_adjusted = np.array([u_bar_p, u_bar_q, u_bar_r])
 
         #print("body_rate_control:: time= {0:.4f}, body_rate (cmd, curr, new)".format(timer.time()), body_rate_cmd, body_rate, body_new )
@@ -260,7 +278,7 @@ class NonlinearController(object):
         
         Returns: target yawrate in radians/sec
         """
-        yaw_p = 5
+
         psi_err = (yaw_cmd - yaw)
 
         # integrate over 40 samples, approx 1 second, to determine yaw acceleration correction needed
@@ -270,7 +288,7 @@ class NonlinearController(object):
         if self.yaw_counter % yaw_counts_per_second == 0 :
             self.accum_yaw_accel_update = self.accum_yaw_err / yaw_counts_per_second
             self.accum_yaw_err = 0
-        r_c = yaw_p * self.accum_yaw_accel_update
+        r_c = self.kpYaw * self.accum_yaw_accel_update
 
         print("yaw_control::time= {0:.4f}, yaw (cmd, curr, new)".format(timer.time()), yaw_cmd, yaw, r_c )
         return r_c
