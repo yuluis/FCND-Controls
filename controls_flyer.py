@@ -15,7 +15,6 @@ from unity_drone import UnityDrone
 from controller import NonlinearController
 from udacidrone.connection import MavlinkConnection  # noqa: F401
 from udacidrone.messaging import MsgID
-import time as timer
 
 
 class States(Enum):
@@ -48,14 +47,8 @@ class ControlsFlyer(UnityDrone):
         
         self.register_callback(MsgID.ATTITUDE, self.attitude_callback)
         self.register_callback(MsgID.RAW_GYROSCOPE, self.gyro_callback)
-        self.start_time = timer.time()
-        self.delaycounter = 0 # used to reduce frequency of altitude correction
-        self.thrust_cmd = 4.5
-        self.roll_pitch_rate_cmd = [0,0]
         
-    def position_controller(self):
-
-
+    def position_controller(self):  
         (self.local_position_target,
          self.local_velocity_target,
          yaw_cmd) = self.controller.trajectory_control(
@@ -68,38 +61,28 @@ class ControlsFlyer(UnityDrone):
                 self.local_velocity_target[0:2],
                 self.local_position[0:2],
                 self.local_velocity[0:2])
-        self.local_acceleration_target = np.array([acceleration_cmd[0], acceleration_cmd[1], 0.0])
-
-
-
+        self.local_acceleration_target = np.array([acceleration_cmd[0],
+                                                   acceleration_cmd[1],
+                                                   0.0])
+        
     def attitude_controller(self):
-
-        # do this every 4 message for about 100 ms
-        self.delaycounter = self.delaycounter + 1
-        #if self.delaycounter % 8 == 0 :
         self.thrust_cmd = self.controller.altitude_control(
                 -self.local_position_target[2],
                 -self.local_velocity_target[2],
                 -self.local_position[2],
                 -self.local_velocity[2],
                 self.attitude,
-                self.local_acceleration_target[2])
-
-
-        #if self.delaycounter % 4 == 0 :
-        self.roll_pitch_rate_cmd = self.controller.roll_pitch_controller(
+                9.81)
+        roll_pitch_rate_cmd = self.controller.roll_pitch_controller(
                 self.local_acceleration_target[0:2],
                 self.attitude,
                 self.thrust_cmd)
-
         yawrate_cmd = self.controller.yaw_control(
                 self.attitude_target[2],
                 self.attitude[2])
-
         self.body_rate_target = np.array(
-                [self.roll_pitch_rate_cmd[0], self.roll_pitch_rate_cmd[1], yawrate_cmd])
-        #print("attitude_controller:: roll, pitch, yaw (world)", self.body_rate_target)
-
+                [roll_pitch_rate_cmd[0], roll_pitch_rate_cmd[1], yawrate_cmd])
+        
     def bodyrate_controller(self):        
         moment_cmd = self.controller.body_rate_control(
                 self.body_rate_target,
@@ -108,8 +91,7 @@ class ControlsFlyer(UnityDrone):
                         moment_cmd[1],
                         moment_cmd[2],
                         self.thrust_cmd)
-        #print("bodyrate_controller: bodyrate moment, thrust", moment_cmd, self.thrust_cmd)
-
+    
     def attitude_callback(self):
         if self.flight_state == States.WAYPOINT:
             self.attitude_controller()
@@ -119,7 +101,6 @@ class ControlsFlyer(UnityDrone):
             self.bodyrate_controller()
 
     def local_position_callback(self):
-        #print("time elapsed since start", timer.time()-self.start_time)
         if self.flight_state == States.TAKEOFF:
             if -1.0 * self.local_position[2] > 0.95 * self.target_position[2]:
                 #self.all_waypoints = self.calculate_box()
@@ -137,8 +118,6 @@ class ControlsFlyer(UnityDrone):
                 else:
                     if np.linalg.norm(self.local_velocity[0:2]) < 1.0:
                         self.landing_transition()
-                        pass
-
 
     def velocity_callback(self):
         if self.flight_state == States.LANDING:
@@ -189,11 +168,6 @@ class ControlsFlyer(UnityDrone):
         #print("waypoint transition")
         self.waypoint_number = self.waypoint_number + 1
         self.target_position = self.all_waypoints.pop(0)
-
-        self.local_position_target = np.array(
-            (self.target_position[0], self.target_position[1], self.target_position[2]))
-        print("waypoint transition: target_position", self.target_position)
-        #self.local_position_target = np.array([0.0, 0.0, -3.0]) # TODO set local_position_target fixed for debugging
         self.flight_state = States.WAYPOINT
 
     def landing_transition(self):
